@@ -4,8 +4,19 @@ import { getWildcard, isFinal, isLocked } from "@/lib/game";
 import { ensureGuesses } from "@/lib/predictor";
 import { scorePrediction, euro } from "@/lib/scoring";
 import { kickoffLabel, timeUntil } from "@/lib/format";
-import { Badge, Button, Card, Crest, GwPager, PageTitle } from "@/components/ui";
+import { Avatar, Badge, Button, Card, Crest, Flash, GwPager } from "@/components/ui";
+import { ScoreInput } from "@/components/ScoreInput";
 import { savePicks } from "../actions";
+import { Bot } from "lucide-react";
+
+function PointsPill({ points, exact, wildcard }: { points: number; exact: boolean; wildcard: boolean }) {
+  if (!points) return <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold text-slate-400">0 pts</span>;
+  return (
+    <span className={`animate-pop rounded-full px-2 py-0.5 text-xs font-black ${exact ? "bg-lime-400 text-slate-950 shadow shadow-lime-400/40" : "bg-lime-400/20 text-lime-300"}`}>
+      +{points} {exact ? "EXACT!" : "result"}{wildcard ? " ×2" : ""}
+    </span>
+  );
+}
 
 export default async function WeekPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
@@ -34,34 +45,75 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
     const p = mine.get(f.id);
     if (p && isFinal(f)) myPoints += scorePrediction(p, { home: f.home_score!, away: f.away_score! }, f.id === wildcardId).points;
   }
+  const progress = openCount ? Math.round((pickedOpen / openCount) * 100) : 100;
 
   return (
     <div>
-      <PageTitle
-        title={`Gameweek ${gw}`}
-        subtitle={<>{participants.length} players · {euro(participants.length * league.fee_cents)} in the weekly pot · you&apos;ve got {myPoints} pt{myPoints === 1 ? "" : "s"} so far</>}
-      >
-        <GwPager gw={gw} min={league.start_gw} max={ctx.maxGw} base="/week" />
-      </PageTitle>
+      {sp.saved && <Flash>{sp.saved}</Flash>}
+      {sp.error && <Flash tone="error">{sp.error}</Flash>}
 
-      {sp.saved && <p className="mb-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{sp.saved}</p>}
-      {sp.error && <p className="mb-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{sp.error}</p>}
-
-      <div className="mb-4 grid gap-3 sm:grid-cols-2">
-        {wildcard && (
-          <Card className="border-fuchsia-200 bg-fuchsia-50">
-            <div className="flex items-center gap-2"><Badge tone="purple">WILDCARD x2</Badge></div>
-            <p className="mt-2 font-semibold">{wildcard.home_name} v {wildcard.away_name}</p>
-            <p className="text-xs text-slate-500">Drawn at random when picks opened. Double points on this one.</p>
-          </Card>
+      <div className="relative mb-4 overflow-hidden rounded-3xl border border-lime-400/20 bg-gradient-to-br from-emerald-900/80 via-emerald-950 to-slate-950 p-5 shadow-2xl shadow-black/40">
+        <div className="pointer-events-none absolute -right-6 -top-10 select-none font-display text-[9rem] font-extrabold leading-none text-white/[0.04]">{gw}</div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-lime-400">Matchday</p>
+            <h1 className="font-display text-3xl font-extrabold uppercase leading-none text-white sm:text-4xl">Gameweek {gw}</h1>
+          </div>
+          <GwPager gw={gw} min={league.start_gw} max={ctx.maxGw} base="/week" compact />
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-2xl bg-black/25 p-2">
+            <p className="font-display text-2xl font-extrabold text-amber-300">{euro(participants.length * league.fee_cents)}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">weekly pot</p>
+          </div>
+          <div className="rounded-2xl bg-black/25 p-2">
+            <p className="font-display text-2xl font-extrabold text-lime-300">{myPoints}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">your pts</p>
+          </div>
+          <div className="rounded-2xl bg-black/25 p-2">
+            <p className="font-display text-2xl font-extrabold text-white">{nextLock?.kickoff ? timeUntil(nextLock.kickoff, now) : "—"}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">next lock</p>
+          </div>
+        </div>
+        {openCount > 0 && (
+          <div className="mt-4">
+            <div className="mb-1 flex justify-between text-xs font-semibold">
+              <span className="text-slate-300">{pickedOpen === openCount ? "All picks in. Nice." : `${pickedOpen}/${openCount} open matches picked`}</span>
+              <span className="text-lime-300">{progress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-black/40">
+              <div className="h-full rounded-full bg-gradient-to-r from-lime-400 to-emerald-400 transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
         )}
-        <Card>
-          <p className="text-sm font-semibold">Predict the Predictor</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Before you pick, the app guesses your score from your history. So far it has called{" "}
-            <b className="text-slate-800">{guessHits}/{judged.length}</b> of your locked-in picks exactly.
-          </p>
-          {openCount > 0 && <p className="mt-1 text-xs text-slate-500">{pickedOpen}/{openCount} open matches picked{nextLock?.kickoff && <> · next lock in <b>{timeUntil(nextLock.kickoff, now)}</b></>}</p>}
+      </div>
+
+      <div className="mb-5 grid gap-3 sm:grid-cols-2">
+        {wildcard && (
+          <div className="wildcard-shine relative overflow-hidden rounded-2xl p-[2px] shadow-xl shadow-fuchsia-500/20">
+            <div className="flex h-full items-center gap-3 rounded-[14px] bg-slate-950/90 p-4">
+              <div className="wildcard-shine grid h-14 w-14 shrink-0 place-items-center rounded-2xl font-display text-2xl font-extrabold text-white">×2</div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-fuchsia-300">Wildcard match</p>
+                <p className="flex items-center gap-1.5 font-display text-lg font-extrabold text-white">
+                  <Crest code={wildcard.home_code} name={wildcard.home_name} size={20} />
+                  {wildcard.home_short} v {wildcard.away_short}
+                  <Crest code={wildcard.away_code} name={wildcard.away_name} size={20} />
+                </p>
+                <p className="text-xs text-slate-400">Drawn at random. Double points, double the shame.</p>
+              </div>
+            </div>
+          </div>
+        )}
+        <Card className="flex items-center gap-3">
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-sky-400/15 text-sky-300 ring-1 ring-sky-400/30"><Bot size={30} aria-hidden /></div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-300">Predict the Predictor</p>
+            <p className="font-display text-lg font-extrabold text-white">
+              {guessHits}/{judged.length} <span className="text-sm font-semibold text-slate-400">of your picks called exactly</span>
+            </p>
+            <p className="text-xs text-slate-400">The bot studies your history and guesses before you pick.</p>
+          </div>
         </Card>
       </div>
 
@@ -76,67 +128,81 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
           const isWild = f.id === wildcardId;
           const final = isFinal(f);
           const pts = pick && final ? scorePrediction(pick, { home: f.home_score!, away: f.away_score! }, isWild) : null;
-          const others = data.players
-            .filter((p) => p.joined_gw <= gw)
-            .map((p) => ({ p, pred: data.predByKey.get(`${p.id}:${f.id}`) }));
+          const others = participants.map((p) => ({ p, pred: data.predByKey.get(`${p.id}:${f.id}`) }));
+          const frame = isWild
+            ? "border-fuchsia-400/60 bg-fuchsia-500/[0.07] shadow-fuchsia-500/10"
+            : locked
+              ? "border-white/5 bg-white/[0.025]"
+              : "border-white/10 bg-white/[0.05]";
           return (
-            <Card key={f.id} className={isWild ? "ring-2 ring-fuchsia-400" : ""}>
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-                <span>{kickoffLabel(f.kickoff)}</span>
+            <div key={f.id} className={`rounded-2xl border p-4 shadow-xl shadow-black/30 ${frame}`}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="font-semibold text-slate-400">{kickoffLabel(f.kickoff)}</span>
                 <span className="flex flex-wrap gap-1">
-                  {isWild && <Badge tone="purple">WILDCARD x2</Badge>}
+                  {isWild && <Badge tone="purple">★ Wildcard ×2</Badge>}
                   {f.source === "manual" && <Badge tone="blue">Manual</Badge>}
-                  {f.status === "live" && <Badge tone="red">LIVE {f.minutes ? `${f.minutes}'` : ""}</Badge>}
-                  {final && <Badge>FT</Badge>}
+                  {f.status === "live" && <Badge tone="red"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />Live {f.minutes ? `${f.minutes}'` : ""}</Badge>}
+                  {final && <Badge>Full time</Badge>}
                   {f.status === "postponed" && <Badge tone="amber">Postponed</Badge>}
-                  {!locked ? <Badge tone="green">Open · locks in {timeUntil(f.kickoff!, now)}</Badge> : <Badge tone="amber">Locked</Badge>}
+                  {!locked ? <Badge tone="green">🔓 {timeUntil(f.kickoff!, now)}</Badge> : !final && f.status !== "live" && <Badge tone="amber">🔒 Locked</Badge>}
                 </span>
               </div>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                <div className="flex items-center justify-end gap-2 text-right">
-                  <span className="font-semibold"><span className="hidden sm:inline">{f.home_name}</span><span className="sm:hidden">{f.home_short}</span></span>
-                  <Crest code={f.home_code} name={f.home_name} />
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <Crest code={f.home_code} name={f.home_name} size={44} />
+                  <span className="text-sm font-bold leading-tight text-white"><span className="hidden sm:inline">{f.home_name}</span><span className="sm:hidden">{f.home_short}</span></span>
                 </div>
                 {locked ? (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold tabular-nums">
-                      {f.home_score ?? "-"} <span className="text-slate-300">:</span> {f.away_score ?? "-"}
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="flex items-center gap-1 rounded-xl bg-black/50 px-3 py-1.5 font-display text-3xl font-extrabold tabular-nums text-white ring-1 ring-white/10">
+                      <span>{f.home_score ?? "–"}</span>
+                      <span className="text-slate-600">:</span>
+                      <span>{f.away_score ?? "–"}</span>
                     </div>
-                    <div className="text-xs text-slate-500">
-                      You: {pick ? `${pick.home}-${pick.away}` : "no pick"}
-                      {pts && <b className={pts.points ? "ml-1 text-emerald-700" : "ml-1 text-slate-400"}>+{pts.points}</b>}
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                      <span>You: <b className="text-slate-200">{pick ? `${pick.home}-${pick.away}` : "no pick"}</b></span>
                     </div>
+                    {pts && <PointsPill points={pts.points} exact={pts.exact} wildcard={isWild} />}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1">
-                    <input aria-label={`${f.home_name} score`} name={`h_${f.id}`} type="number" inputMode="numeric" min={0} max={20} defaultValue={pick?.home ?? ""} className="h-12 w-12 rounded-lg border border-slate-300 text-center text-xl font-bold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200" />
-                    <span className="text-slate-300">:</span>
-                    <input aria-label={`${f.away_name} score`} name={`a_${f.id}`} type="number" inputMode="numeric" min={0} max={20} defaultValue={pick?.away ?? ""} className="h-12 w-12 rounded-lg border border-slate-300 text-center text-xl font-bold focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200" />
+                  <div className="flex items-center gap-2">
+                    <ScoreInput name={`h_${f.id}`} label={`${f.home_name} score`} initial={pick?.home ?? null} />
+                    <span className="font-display text-2xl font-extrabold text-slate-600">:</span>
+                    <ScoreInput name={`a_${f.id}`} label={`${f.away_name} score`} initial={pick?.away ?? null} />
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <Crest code={f.away_code} name={f.away_name} />
-                  <span className="font-semibold"><span className="hidden sm:inline">{f.away_name}</span><span className="sm:hidden">{f.away_short}</span></span>
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <Crest code={f.away_code} name={f.away_name} size={44} />
+                  <span className="text-sm font-bold leading-tight text-white"><span className="hidden sm:inline">{f.away_name}</span><span className="sm:hidden">{f.away_short}</span></span>
                 </div>
               </div>
               {!locked && guess && (
-                <p className="mt-2 text-center text-xs text-slate-500">
-                  The app reckons you&apos;ll go <b className="text-slate-800">{guess.home}-{guess.away}</b>
-                  {pick && (pick.home === guess.home && pick.away === guess.away ? " (and so far it's right)" : " (you're proving it wrong)")}
-                </p>
+                <div className="mt-3 flex items-center justify-center gap-2 text-xs">
+                  <span className="rounded-full bg-sky-400/10 px-3 py-1 text-sky-200 ring-1 ring-sky-400/20">
+                    🤖 Bot reckons you&apos;ll go <b className="text-white">{guess.home}-{guess.away}</b>
+                    {pick && (pick.home === guess.home && pick.away === guess.away ? " · so far it's right 😬" : " · you're proving it wrong 😎")}
+                  </span>
+                </div>
               )}
               {locked && (
-                <details className="mt-3 text-sm">
-                  <summary className="cursor-pointer text-xs font-medium text-emerald-700">Everyone&apos;s picks</summary>
-                  <ul className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-3">
+                <details className="group mt-3 text-sm">
+                  <summary className="flex cursor-pointer list-none items-center justify-center gap-1 text-xs font-bold uppercase tracking-wide text-lime-300">
+                    <span className="flex -space-x-2">{others.slice(0, 6).map(({ p }) => <Avatar key={p.id} id={p.id} name={p.name} size="sm" />)}</span>
+                    <span className="ml-1">Everyone&apos;s picks</span>
+                    <span className="transition group-open:rotate-180">▾</span>
+                  </summary>
+                  <ul className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                     {others.map(({ p, pred }) => {
                       const s = pred && final ? scorePrediction(pred, { home: f.home_score!, away: f.away_score! }, isWild) : null;
                       return (
-                        <li key={p.id} className="flex justify-between rounded bg-slate-50 px-2 py-1">
-                          <span className={p.id === user.id ? "font-semibold" : ""}>{p.name}</span>
-                          <span className="tabular-nums">
+                        <li key={p.id} className={`flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 ${s?.exact ? "bg-lime-400/15 ring-1 ring-lime-400/30" : "bg-white/5"}`}>
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <Avatar id={p.id} name={p.name} size="sm" />
+                            <span className={`truncate ${p.id === user.id ? "font-bold text-white" : "text-slate-300"}`}>{p.name}</span>
+                          </span>
+                          <span className="whitespace-nowrap font-display font-extrabold tabular-nums text-white">
                             {pred ? `${pred.home}-${pred.away}` : "—"}
-                            {s && <b className={s.points ? "ml-1 text-emerald-700" : "ml-1 text-slate-400"}>+{s.points}</b>}
+                            {s && <span className={`ml-1 text-xs ${s.points ? "text-lime-300" : "text-slate-500"}`}>+{s.points}</span>}
                           </span>
                         </li>
                       );
@@ -144,18 +210,18 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
                   </ul>
                 </details>
               )}
-            </Card>
+            </div>
           );
         })}
         {openCount > 0 && (
-          <div className="sticky bottom-3 z-10">
-            <Button className="w-full py-3 text-base shadow-lg">Save picks</Button>
+          <div className="sticky bottom-24 z-10 sm:bottom-4">
+            <Button className="w-full rounded-2xl py-4 font-display text-lg uppercase tracking-wide shadow-2xl shadow-lime-400/30">Save my picks ⚡</Button>
           </div>
         )}
       </form>
       <p className="mt-6 text-center text-xs text-slate-500">
-        Scoring: correct result 1 pt · exact score 3 pts · wildcard x2. Picks lock at each match&apos;s kick-off.{" "}
-        <Link className="underline" href={`/leaderboard?gw=${gw}`}>See the GW{gw} table</Link>
+        Result 1 pt · Exact score 3 pts · Wildcard ×2 · Picks lock at each kick-off.{" "}
+        <Link className="font-semibold text-lime-300 underline" href={`/leaderboard?gw=${gw}`}>GW{gw} table →</Link>
       </p>
     </div>
   );
