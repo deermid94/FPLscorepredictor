@@ -142,7 +142,10 @@ CREATE TABLE IF NOT EXISTS meta (
 async function migrate() {
   const userCols = await all<{ name: string }>("PRAGMA table_info(users)");
   if (!userCols.some((c) => c.name === "is_guest")) {
-    await run("ALTER TABLE users ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0");
+    // Another instance starting at the same moment may have just added it.
+    await run("ALTER TABLE users ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0").catch((e) => {
+      if (!String(e?.message ?? e).includes("duplicate column")) throw e;
+    });
   }
   await migrateLeagueScopedFixtures();
 }
