@@ -7,6 +7,7 @@ import { getLeague } from "@/lib/game";
 import { Nav } from "@/components/Nav";
 import { Avatar } from "@/components/ui";
 import { logout } from "./actions";
+import { Goal } from "lucide-react";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -30,7 +31,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <header className="sticky top-0 z-20 border-b border-white/10 bg-[#06120d]/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
             <Link href="/" className="flex items-center gap-2.5">
-              <span className="animate-float grid h-9 w-9 place-items-center rounded-xl bg-lime-400 text-xl shadow-lg shadow-lime-400/30">⚽</span>
+              <span className="animate-float grid h-9 w-9 place-items-center rounded-xl bg-lime-400 text-slate-950 shadow-lg shadow-lime-400/30"><Goal size={20} strokeWidth={2.5} aria-hidden /></span>
               <span className="leading-none">
                 <span className="block font-display text-lg font-extrabold uppercase tracking-tight text-white">Score Predictor</span>
                 <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-lime-400">{league?.name ?? "League"}</span>

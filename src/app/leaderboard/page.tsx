@@ -65,12 +65,11 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
       <SectionTitle>🤡 Hall of Shame</SectionTitle>
       {t.shame ? (
         <div className="relative overflow-hidden rounded-2xl border border-rose-500/40 bg-gradient-to-br from-rose-950/80 to-slate-950 p-5 shadow-xl shadow-rose-900/20">
-          <span className="stamp absolute right-3 top-3 rounded-md px-1.5 py-0.5 font-display text-xs font-extrabold uppercase text-rose-400/80">Shameful</span>
-          <div className="flex items-center gap-3 pr-20">
+          <div className="flex items-center gap-3">
             <Avatar id={t.shame.player.id} name={t.shame.player.name} size="lg" />
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-300">Worst pick of GW{gw}{t.shame.wildcard && " · on the wildcard"}</p>
-              <p className="font-display text-2xl font-extrabold text-white">{t.shame.player.name}</p>
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-display text-2xl font-extrabold text-white">{t.shame.player.name}<span className="stamp rounded-md px-1.5 py-0.5 text-xs uppercase text-rose-400/80">Shameful</span></p>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl bg-black/30 p-3 text-center">

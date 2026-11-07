@@ -2,18 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Crown, Goal, Search, Settings, Trophy, Wallet } from "lucide-react";
 
 const LINKS = [
-  { href: "/week", label: "Picks", icon: "⚽" },
-  { href: "/leaderboard", label: "Weekly", icon: "🏆" },
-  { href: "/season", label: "Season", icon: "👑" },
-  { href: "/ledger", label: "Ledger", icon: "💶" },
-  { href: "/scouting", label: "Scouting", icon: "🔍" },
+  { href: "/week", label: "Picks", icon: Goal },
+  { href: "/leaderboard", label: "Weekly", icon: Trophy },
+  { href: "/season", label: "Season", icon: Crown },
+  { href: "/ledger", label: "Ledger", icon: Wallet },
+  { href: "/scouting", label: "Scouting", icon: Search },
 ];
 
 export function Nav({ admin, variant }: { admin: boolean; variant: "top" | "bottom" }) {
   const path = usePathname();
-  const links = admin ? [...LINKS, { href: "/admin", label: "Admin", icon: "⚙️" }] : LINKS;
+  const links = admin ? [...LINKS, { href: "/admin", label: "Admin", icon: Settings }] : LINKS;
   if (variant === "top") {
     return (
       <nav className="hidden gap-1 sm:flex">
@@ -39,7 +40,7 @@ export function Nav({ admin, variant }: { admin: boolean; variant: "top" | "bott
           const active = path.startsWith(l.href);
           return (
             <Link key={l.href} href={l.href} className="flex flex-1 flex-col items-center gap-0.5 py-2">
-              <span className={`grid h-8 w-11 place-items-center rounded-full text-lg transition ${active ? "bg-lime-400/20 ring-1 ring-lime-400/50" : "opacity-70 grayscale"}`}>{l.icon}</span>
+              <span className={`grid h-8 w-11 place-items-center rounded-full transition ${active ? "bg-lime-400/20 text-lime-300 ring-1 ring-lime-400/50" : "text-slate-400"}`}><l.icon size={20} strokeWidth={2.25} aria-hidden /></span>
               <span className={`text-[10px] font-bold uppercase tracking-wide ${active ? "text-lime-300" : "text-slate-400"}`}>{l.label}</span>
             </Link>
           );

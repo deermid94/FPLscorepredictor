@@ -7,6 +7,7 @@ import { kickoffLabel, timeUntil } from "@/lib/format";
 import { Avatar, Badge, Button, Card, Crest, Flash, GwPager } from "@/components/ui";
 import { ScoreInput } from "@/components/ScoreInput";
 import { savePicks } from "../actions";
+import { Bot } from "lucide-react";
 
 function PointsPill({ points, exact, wildcard }: { points: number; exact: boolean; wildcard: boolean }) {
   if (!points) return <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold text-slate-400">0 pts</span>;
@@ -105,7 +106,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
           </div>
         )}
         <Card className="flex items-center gap-3">
-          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-sky-400/15 text-3xl ring-1 ring-sky-400/30">🤖</div>
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-sky-400/15 text-sky-300 ring-1 ring-sky-400/30"><Bot size={30} aria-hidden /></div>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-300">Predict the Predictor</p>
             <p className="font-display text-lg font-extrabold text-white">

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { Button, Card, Flash, inputCls } from "@/components/ui";
 import { createLeague, joinLeague } from "../actions";
+import { Goal } from "lucide-react";
 
 const label = "block text-xs font-bold uppercase tracking-wide text-slate-400";
 
@@ -14,7 +15,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
   return (
     <div className="mx-auto max-w-md space-y-5 pt-4">
       <div className="text-center">
-        <div className="animate-float mx-auto mb-4 grid h-20 w-20 place-items-center rounded-3xl bg-lime-400 text-5xl shadow-2xl shadow-lime-400/40">⚽</div>
+        <div className="animate-float mx-auto mb-4 grid h-20 w-20 place-items-center rounded-3xl bg-lime-400 text-slate-950 shadow-2xl shadow-lime-400/40"><Goal size={44} strokeWidth={2.25} aria-hidden /></div>
         <h1 className="font-display text-5xl font-extrabold uppercase leading-[0.9] tracking-tight text-white">
           Predict.<br /><span className="text-lime-400">Gloat.</span><br />Repeat.
         </h1>
