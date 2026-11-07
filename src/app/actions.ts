@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache";
 import { clearSession, hashPin, requireAdmin, requireUser, setSession, verifyPin } from "@/lib/auth";
 import { batch, ensureDb, get, run } from "@/lib/db";
 import { syncFromFpl } from "@/lib/fpl";
-import { all } from "@/lib/db";
 import { currentGw, fixturesForGw, getFixture, getLeague, isFinal, isLocked, type League } from "@/lib/game";
 import { attemptKeys, clearFailures, lockoutMessage, recordFailure } from "@/lib/loginGuard";
 import { DEMO_INVITE, isDemoLeague, seedDemo } from "@/lib/seed";
