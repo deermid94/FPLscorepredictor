@@ -18,14 +18,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const [players, teams, fixtures, payments, sync, cache, wildcardId] = await Promise.all([
     getPlayers(league.id),
     getTeams(),
-    fixturesForGw(rgw),
+    fixturesForGw(league.id, rgw),
     all<{ user_id: number; paid: number }>("SELECT user_id, paid FROM payments WHERE gameweek = ?", [pgw]),
     lastSync(),
     cacheInfo(),
     getWildcard(league.id, cur, false),
   ]);
   const paid = new Set(payments.filter((p) => p.paid).map((p) => p.user_id));
-  const wildcard = (await fixturesForGw(cur)).find((f) => f.id === wildcardId);
+  const wildcard = (await fixturesForGw(league.id, cur)).find((f) => f.id === wildcardId);
   const back = `/admin?rgw=${rgw}`;
   const gwOptions = Array.from({ length: max - league.start_gw + 1 }, (_, i) => league.start_gw + i);
 

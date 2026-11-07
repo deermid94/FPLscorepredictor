@@ -24,8 +24,11 @@ export type Fixture = {
   minutes: number;
   home_difficulty: number | null;
   away_difficulty: number | null;
+  /** 1 when this league's admin has overridden the result. */
   manual_result: number;
   source: string;
+  /** Owning league for manually added fixtures; null for shared FPL fixtures. */
+  league_id: number | null;
   home_name: string;
   home_short: string;
   home_code: number | null;
@@ -35,10 +38,22 @@ export type Fixture = {
 };
 export type Prediction = { user_id: number; fixture_id: number; home: number; away: number; updated_at: string };
 
+/**
+ * FPL fixtures are shared by every league; manual fixtures and manual results are per-league.
+ * Takes the league id twice as its first two args.
+ */
 const FIXTURE_SELECT = `
-  SELECT f.*, h.name AS home_name, h.short_name AS home_short, h.code AS home_code,
+  SELECT f.id, f.fpl_id, f.gameweek, f.kickoff, f.home_team, f.away_team,
+         COALESCE(o.home, f.home_score) AS home_score, COALESCE(o.away, f.away_score) AS away_score,
+         CASE WHEN o.fixture_id IS NULL THEN f.status ELSE 'finished' END AS status,
+         f.minutes, f.home_difficulty, f.away_difficulty,
+         CASE WHEN o.fixture_id IS NULL THEN 0 ELSE 1 END AS manual_result,
+         f.source, f.league_id, f.updated_at,
+         h.name AS home_name, h.short_name AS home_short, h.code AS home_code,
          a.name AS away_name, a.short_name AS away_short, a.code AS away_code
-  FROM fixtures f JOIN teams h ON h.id = f.home_team JOIN teams a ON a.id = f.away_team`;
+  FROM fixtures f JOIN teams h ON h.id = f.home_team JOIN teams a ON a.id = f.away_team
+  LEFT JOIN result_overrides o ON o.fixture_id = f.id AND o.league_id = ?
+  WHERE (f.league_id IS NULL OR f.league_id = ?)`;
 
 export const isLocked = (f: Pick<Fixture, "status" | "kickoff">, now = new Date()) =>
   f.status !== "scheduled" || !f.kickoff || new Date(f.kickoff) <= now;
@@ -57,19 +72,21 @@ export async function getTeams() {
   return all<{ id: number; name: string; short_name: string }>("SELECT id, name, short_name FROM teams ORDER BY name");
 }
 
-export async function fixturesForGw(gw: number) {
-  return all<Fixture>(`${FIXTURE_SELECT} WHERE f.gameweek = ? ORDER BY f.kickoff, f.id`, [gw]);
+export async function fixturesForGw(leagueId: number, gw: number) {
+  return all<Fixture>(`${FIXTURE_SELECT} AND f.gameweek = ? ORDER BY f.kickoff, f.id`, [leagueId, leagueId, gw]);
 }
 
-export async function getFixture(id: number) {
-  return get<Fixture>(`${FIXTURE_SELECT} WHERE f.id = ?`, [id]);
+export async function getFixture(leagueId: number, id: number) {
+  return get<Fixture>(`${FIXTURE_SELECT} AND f.id = ?`, [leagueId, leagueId, id]);
 }
 
 /** The earliest gameweek (from the league's start) that still has matches to play. */
 export async function currentGw(league: League) {
   const row = await get<{ gw: number | null }>(
-    "SELECT MIN(gameweek) AS gw FROM fixtures WHERE gameweek >= ? AND status NOT IN ('finished', 'postponed')",
-    [league.start_gw],
+    `SELECT MIN(gameweek) AS gw FROM fixtures
+     WHERE gameweek >= ? AND status NOT IN ('finished', 'postponed') AND (league_id IS NULL OR league_id = ?)
+       AND id NOT IN (SELECT fixture_id FROM result_overrides WHERE league_id = ?)`,
+    [league.start_gw, league.id, league.id],
   );
   if (row?.gw) return row.gw;
   const last = await get<{ gw: number | null }>("SELECT MAX(gameweek) AS gw FROM fixtures");
@@ -88,7 +105,7 @@ export async function getWildcard(leagueId: number, gw: number, create = true): 
     [leagueId, gw],
   );
   if (existing || !create) return existing?.fixture_id ?? null;
-  const fixtures = await fixturesForGw(gw);
+  const fixtures = await fixturesForGw(leagueId, gw);
   if (!fixtures.length) return null;
   const open = fixtures.filter((f) => !isLocked(f));
   const pool = open.length ? open : fixtures;
@@ -102,7 +119,7 @@ export type LeagueData = Awaited<ReturnType<typeof loadLeagueData>>;
 export async function loadLeagueData(league: League) {
   const [players, fixtures, predictions, wildcardRows, payments, guesses] = await Promise.all([
     getPlayers(league.id),
-    all<Fixture>(`${FIXTURE_SELECT} WHERE f.gameweek >= ? ORDER BY f.kickoff, f.id`, [league.start_gw]),
+    all<Fixture>(`${FIXTURE_SELECT} AND f.gameweek >= ? ORDER BY f.kickoff, f.id`, [league.id, league.id, league.start_gw]),
     all<Prediction>(
       "SELECT p.* FROM predictions p JOIN users u ON u.id = p.user_id WHERE u.league_id = ?",
       [league.id],

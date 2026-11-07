@@ -81,9 +81,18 @@ CREATE TABLE IF NOT EXISTS fixtures (
   away_difficulty INTEGER,
   manual_result INTEGER NOT NULL DEFAULT 0,
   source TEXT NOT NULL DEFAULT 'fpl',
+  league_id INTEGER REFERENCES leagues(id),
   updated_at TEXT
 );
 CREATE INDEX IF NOT EXISTS fixtures_gw ON fixtures(gameweek);
+CREATE TABLE IF NOT EXISTS result_overrides (
+  league_id INTEGER NOT NULL REFERENCES leagues(id),
+  fixture_id INTEGER NOT NULL REFERENCES fixtures(id),
+  home INTEGER NOT NULL,
+  away INTEGER NOT NULL,
+  updated_at TEXT,
+  PRIMARY KEY (league_id, fixture_id)
+);
 CREATE TABLE IF NOT EXISTS predictions (
   user_id INTEGER NOT NULL REFERENCES users(id),
   fixture_id INTEGER NOT NULL REFERENCES fixtures(id),
@@ -123,12 +132,28 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 `;
 
+/** Upgrade DBs created before manual results/fixtures became league-scoped. */
+async function migrate() {
+  const cols = await all<{ name: string }>("PRAGMA table_info(fixtures)");
+  if (cols.some((c) => c.name === "league_id")) return;
+  await batch([
+    "ALTER TABLE fixtures ADD COLUMN league_id INTEGER REFERENCES leagues(id)",
+    `INSERT OR IGNORE INTO result_overrides (league_id, fixture_id, home, away, updated_at)
+       SELECT l.id, f.id, f.home_score, f.away_score, f.updated_at FROM fixtures f, leagues l
+       WHERE f.manual_result = 1 AND f.home_score IS NOT NULL AND f.away_score IS NOT NULL`,
+    "UPDATE fixtures SET home_score = NULL, away_score = NULL, status = 'scheduled' WHERE manual_result = 1 AND source = 'manual'",
+    "UPDATE fixtures SET manual_result = 0, updated_at = NULL WHERE manual_result = 1",
+    "DELETE FROM api_cache WHERE key = '/fixtures/'",
+  ]);
+}
+
 let ready: Promise<void> | null = null;
 
 export function ensureDb(): Promise<void> {
   if (!ready) {
     ready = (async () => {
       await db().executeMultiple(SCHEMA);
+      await migrate();
       const { syncFromFpl } = await import("./fpl");
       await syncFromFpl();
       const league = await get("SELECT id FROM leagues LIMIT 1");

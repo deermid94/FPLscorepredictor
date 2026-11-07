@@ -83,7 +83,7 @@ export async function savePicks(formData: FormData) {
   const gw = Number(formData.get("gw"));
   const back = `/week?gw=${gw}`;
   if (gw < league.start_gw) err(back, "This gameweek is before your league started");
-  const fixtures = await fixturesForGw(gw);
+  const fixtures = await fixturesForGw(league.id, gw);
   const now = new Date();
   let saved = 0, locked = 0, invalid = 0;
   const stmts = [];
@@ -139,35 +139,31 @@ export async function togglePayment(formData: FormData) {
 }
 
 export async function setResult(formData: FormData) {
-  await adminLeague();
+  const { league } = await adminLeague();
   const id = Number(formData.get("fixture"));
   const h = score(formData.get("home"));
   const a = score(formData.get("away"));
   const back = String(formData.get("back") || "/admin");
   if (h === null || a === null || Number.isNaN(h) || Number.isNaN(a)) err(back, "Enter both scores (0-20)");
-  await run("UPDATE fixtures SET home_score = ?, away_score = ?, status = 'finished', manual_result = 1, updated_at = ? WHERE id = ?", [
-    h, a, new Date().toISOString(), id,
-  ]);
+  if (!(await getFixture(league.id, id))) err(back, "Unknown fixture");
+  await run(
+    `INSERT INTO result_overrides (league_id, fixture_id, home, away, updated_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(league_id, fixture_id) DO UPDATE SET home = excluded.home, away = excluded.away, updated_at = excluded.updated_at`,
+    [league.id, id, h, a, new Date().toISOString()],
+  );
   redirect(`${back}${back.includes("?") ? "&" : "?"}ok=Result+saved#results`);
 }
 
 export async function clearManualResult(formData: FormData) {
-  await adminLeague();
+  const { league } = await adminLeague();
   const id = Number(formData.get("fixture"));
   const back = String(formData.get("back") || "/admin");
-  const f = await getFixture(id);
-  if (f?.source === "fpl") {
-    await run("UPDATE fixtures SET manual_result = 0 WHERE id = ?", [id]);
-    await run("DELETE FROM api_cache WHERE key = '/fixtures/'");
-    await syncFromFpl(true);
-  } else {
-    await run("UPDATE fixtures SET manual_result = 0, home_score = NULL, away_score = NULL, status = 'scheduled' WHERE id = ?", [id]);
-  }
+  await run("DELETE FROM result_overrides WHERE league_id = ? AND fixture_id = ?", [league.id, id]);
   redirect(`${back}${back.includes("?") ? "&" : "?"}ok=Result+handed+back+to+API#results`);
 }
 
 export async function addFixture(formData: FormData) {
-  await adminLeague();
+  const { league } = await adminLeague();
   const gw = Number(formData.get("gw"));
   const home = Number(formData.get("home"));
   const away = Number(formData.get("away"));
@@ -177,18 +173,19 @@ export async function addFixture(formData: FormData) {
   let iso = "";
   try { iso = localToUtc(kickoff); } catch { err("/admin", "Invalid kick-off time"); }
   await run(
-    "INSERT INTO fixtures (fpl_id, gameweek, kickoff, home_team, away_team, status, source, updated_at) VALUES (NULL, ?, ?, ?, ?, 'scheduled', 'manual', ?)",
-    [gw, iso, home, away, new Date().toISOString()],
+    "INSERT INTO fixtures (fpl_id, gameweek, kickoff, home_team, away_team, status, source, league_id, updated_at) VALUES (NULL, ?, ?, ?, ?, 'scheduled', 'manual', ?, ?)",
+    [gw, iso, home, away, league.id, new Date().toISOString()],
   );
   redirect(`/admin?ok=Fixture+added&rgw=${gw}#results`);
 }
 
 export async function deleteFixture(formData: FormData) {
-  await adminLeague();
+  const { league } = await adminLeague();
   const id = Number(formData.get("fixture"));
-  const f = await getFixture(id);
-  if (!f || f.source !== "manual") err("/admin", "Only manually added fixtures can be deleted");
+  const f = await getFixture(league.id, id);
+  if (!f || f.source !== "manual" || f.league_id !== league.id) err("/admin", "Only your league's manually added fixtures can be deleted");
   await batch([
+    { sql: "DELETE FROM result_overrides WHERE fixture_id = ?", args: [id] },
     { sql: "DELETE FROM predictions WHERE fixture_id = ?", args: [id] },
     { sql: "DELETE FROM predictor_guesses WHERE fixture_id = ?", args: [id] },
     { sql: "DELETE FROM wildcards WHERE fixture_id = ?", args: [id] },
@@ -200,7 +197,7 @@ export async function deleteFixture(formData: FormData) {
 export async function rerollWildcard(formData: FormData) {
   const { league } = await adminLeague();
   const gw = Number(formData.get("gw"));
-  const fixtures = (await fixturesForGw(gw)).filter((f) => !isLocked(f));
+  const fixtures = (await fixturesForGw(league.id, gw)).filter((f) => !isLocked(f));
   if (!fixtures.length) err("/admin", "Every match this gameweek has kicked off; the wildcard can't change now");
   const pick = fixtures[crypto.randomInt(fixtures.length)];
   await run(
