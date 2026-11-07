@@ -40,7 +40,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
       {sp.error && <Flash tone="error">{sp.error}</Flash>}
       <Card className="p-5">
         {!create ? (
-          <form action={joinLeague} className="space-y-4">
+          <form key="join" action={joinLeague} className="space-y-4">
             <label className={label}>Invite code
               <input name="invite" required defaultValue={invite} autoCapitalize="characters" className={`${inputCls} mt-1 font-mono text-lg uppercase tracking-[0.2em]`} placeholder="MATES26" />
             </label>
@@ -54,7 +54,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
             <Button className="w-full rounded-2xl py-3.5 font-display text-lg uppercase">Let me in →</Button>
           </form>
         ) : (
-          <form action={createLeague} className="space-y-4">
+          <form key="create" action={createLeague} className="space-y-4">
             <label className={label}>League name
               <input name="league" required maxLength={24} className={`${inputCls} mt-1`} placeholder="Sunday League Legends" />
             </label>

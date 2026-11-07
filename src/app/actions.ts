@@ -246,7 +246,7 @@ export async function simulateFullTime() {
   const next = (await fixturesForGw(league.id, gw))
     .filter((f) => !isFinal(f))
     .sort((a, b) => (a.kickoff ?? "").localeCompare(b.kickoff ?? ""))[0];
-  if (!next) err("/admin#demo", `Every GW${gw} match already has a result`);
+  if (!next) err("/admin", `Every GW${gw} match already has a result`);
   const [h, a] = SIM_SCORES[crypto.randomInt(SIM_SCORES.length)];
   await run(
     `INSERT INTO result_overrides (league_id, fixture_id, home, away, updated_at) VALUES (?, ?, ?, ?, ?)
@@ -259,7 +259,7 @@ export async function simulateFullTime() {
 
 export async function resetDemo(formData: FormData) {
   const { league } = await demoAdmin();
-  if (formData.get("confirm") !== "yes") err("/admin#demo", "Tick the box to confirm the reset");
+  if (formData.get("confirm") !== "yes") err("/admin", "Tick the box to confirm the reset");
   const users = "SELECT id FROM users WHERE league_id = ?";
   const fixtures = "SELECT id FROM fixtures WHERE league_id = ?";
   const id = league.id;
