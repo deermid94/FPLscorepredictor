@@ -55,6 +55,21 @@ export async function joinLeague(formData: FormData) {
   redirect("/week");
 }
 
+const DEMO_LOGINS = ["Conor", "Ollie"];
+
+export async function demoLogin(formData: FormData) {
+  await ensureDb();
+  const name = String(formData.get("name") ?? "");
+  if (process.env.SEED_DEMO === "false" || !DEMO_LOGINS.includes(name)) err("/join", "Demo login isn't available");
+  const user = await get<{ id: number }>(
+    "SELECT u.id FROM users u JOIN leagues l ON l.id = u.league_id WHERE l.invite_code = ? AND u.name = ?",
+    [DEMO_INVITE, name],
+  );
+  if (!user) err("/join", "Demo league isn't ready yet; reload and try again");
+  await setSession(user!.id);
+  redirect("/week");
+}
+
 export async function createLeague(formData: FormData) {
   await ensureDb();
   const leagueName = cleanName(formData.get("league")) || "Score Predictor League";
