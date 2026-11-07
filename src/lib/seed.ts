@@ -68,7 +68,7 @@ function pickFor(p: Persona, f: Fixture, r: () => number) {
 export async function seedDemo() {
   const r = rng(20261107);
   const cur = await get<{ gw: number | null }>(
-    "SELECT MIN(gameweek) AS gw FROM fixtures WHERE status NOT IN ('finished', 'postponed')",
+    "SELECT MIN(gameweek) AS gw FROM fixtures WHERE league_id IS NULL AND status NOT IN ('finished', 'postponed')",
   );
   const currentGw = Math.max(5, cur?.gw ?? 5);
   const startGw = currentGw - 4;
@@ -93,7 +93,7 @@ export async function seedDemo() {
   const fixtures = await all<Fixture>(
     `SELECT f.*, h.name AS home_name, h.short_name AS home_short, a.name AS away_name, a.short_name AS away_short
      FROM fixtures f JOIN teams h ON h.id = f.home_team JOIN teams a ON a.id = f.away_team
-     WHERE f.gameweek BETWEEN ? AND ? ORDER BY f.gameweek, f.kickoff`,
+     WHERE f.league_id IS NULL AND f.gameweek BETWEEN ? AND ? ORDER BY f.gameweek, f.kickoff`,
     [startGw, currentGw],
   );
 
