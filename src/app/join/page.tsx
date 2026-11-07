@@ -45,7 +45,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
               <input name="invite" required defaultValue={invite} autoCapitalize="characters" className={`${inputCls} mt-1 font-mono text-lg uppercase tracking-[0.2em]`} placeholder="MATES26" />
             </label>
             <label className={label}>Your name
-              <input name="name" required maxLength={24} className={`${inputCls} mt-1`} placeholder="What the lads call you" />
+              <input name="name" required maxLength={24} className={`${inputCls} mt-1`} placeholder="What your friends call you" />
             </label>
             <label className={label}>PIN (4-8 digits)
               <input name="pin" required inputMode="numeric" pattern="\d{4,8}" type="password" className={`${inputCls} mt-1 tracking-[0.3em]`} placeholder="••••" />

@@ -6,6 +6,7 @@ import { guessPick, homeEdge, type Pick } from "./scouting";
 import { outcome, type Outcome } from "./scoring";
 
 export const DEMO_INVITE = "MATES26";
+export const DEMO_LEAGUE_NAME = "The Group Chat League";
 
 /** True when demo seeding is on and this is the seeded demo league (real invite codes are 6 chars, so they can't collide). */
 export const isDemoLeague = (league: { invite_code: string }) => process.env.SEED_DEMO !== "false" && league.invite_code === DEMO_INVITE;
@@ -106,7 +107,7 @@ export async function seedDemo() {
   const stmts: { sql: string; args: (number | string)[] }[] = [
     {
       sql: "INSERT INTO leagues (name, invite_code, start_gw, season_end_date, fee_cents) VALUES (?, ?, ?, ?, 500)",
-      args: ["The Lads' League", DEMO_INVITE, startGw, "2027-05-23"],
+      args: [DEMO_LEAGUE_NAME, DEMO_INVITE, startGw, "2027-05-23"],
     },
     ...PERSONAS.map((p) => ({
       sql: `INSERT INTO users (league_id, name, pin_hash, is_admin, joined_gw) VALUES (${LEAGUE}, ?, ?, ?, ?)`,
