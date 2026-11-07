@@ -102,7 +102,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <form action={setResult} className="flex items-center gap-1">
+                <form key={`${f.home_score}-${f.away_score}-${f.manual_result}`} action={setResult} className="flex items-center gap-1">
                   <input type="hidden" name="fixture" value={f.id} />
                   <input type="hidden" name="back" value={back} />
                   <input name="home" type="number" min={0} max={20} defaultValue={f.home_score ?? ""} className="h-9 w-12 rounded border border-slate-300 text-center" aria-label="Home score" />
