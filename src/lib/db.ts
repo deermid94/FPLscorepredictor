@@ -126,6 +126,12 @@ CREATE TABLE IF NOT EXISTS api_cache (
   body TEXT NOT NULL,
   fetched_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS login_attempts (
+  key TEXT PRIMARY KEY,
+  fails INTEGER NOT NULL,
+  window_start INTEGER NOT NULL,
+  locked_until INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,
   value TEXT
@@ -156,10 +162,9 @@ export function ensureDb(): Promise<void> {
       await migrate();
       const { syncFromFpl } = await import("./fpl");
       await syncFromFpl();
-      const league = await get("SELECT id FROM leagues LIMIT 1");
-      if (!league && process.env.SEED_DEMO !== "false") {
-        const { seedDemo } = await import("./seed");
-        await seedDemo();
+      if (process.env.SEED_DEMO !== "false") {
+        const { DEMO_INVITE, seedDemo } = await import("./seed");
+        if (!(await get("SELECT id FROM leagues WHERE invite_code = ?", [DEMO_INVITE]))) await seedDemo();
       }
     })().catch((e) => {
       ready = null;

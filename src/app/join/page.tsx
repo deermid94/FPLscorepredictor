@@ -4,6 +4,9 @@ import { currentUser } from "@/lib/auth";
 import { Button, Card, Flash, inputCls } from "@/components/ui";
 import { createLeague, joinLeague } from "../actions";
 import { Goal } from "lucide-react";
+import { QrCode } from "@/components/QrCode";
+import { joinUrl, siteOrigin } from "@/lib/origin";
+import { DEMO_INVITE } from "@/lib/seed";
 
 const label = "block text-xs font-bold uppercase tracking-wide text-slate-400";
 
@@ -12,6 +15,9 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const create = sp.tab === "create";
   const demo = process.env.SEED_DEMO !== "false";
+  const invite = (sp.invite ?? "").trim().toUpperCase().slice(0, 12);
+  const qrInvite = invite || (demo ? DEMO_INVITE : "");
+  const qrUrl = joinUrl(await siteOrigin(), qrInvite);
   return (
     <div className="mx-auto max-w-md space-y-5 pt-4">
       <div className="text-center">
@@ -30,12 +36,13 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
         <Link href="/join" className={`rounded-xl py-2.5 text-center transition ${!create ? "bg-lime-400 text-slate-950" : "text-slate-400"}`}>Join a league</Link>
         <Link href="/join?tab=create" className={`rounded-xl py-2.5 text-center transition ${create ? "bg-lime-400 text-slate-950" : "text-slate-400"}`}>Start a league</Link>
       </div>
+      {sp.ok && <Flash>{sp.ok}</Flash>}
       {sp.error && <Flash tone="error">{sp.error}</Flash>}
       <Card className="p-5">
         {!create ? (
-          <form action={joinLeague} className="space-y-4">
+          <form key="join" action={joinLeague} className="space-y-4">
             <label className={label}>Invite code
-              <input name="invite" required autoCapitalize="characters" className={`${inputCls} mt-1 font-mono text-lg uppercase tracking-[0.2em]`} placeholder="MATES26" />
+              <input name="invite" required defaultValue={invite} autoCapitalize="characters" className={`${inputCls} mt-1 font-mono text-lg uppercase tracking-[0.2em]`} placeholder="MATES26" />
             </label>
             <label className={label}>Your name
               <input name="name" required maxLength={24} className={`${inputCls} mt-1`} placeholder="What the lads call you" />
@@ -47,7 +54,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
             <Button className="w-full rounded-2xl py-3.5 font-display text-lg uppercase">Let me in →</Button>
           </form>
         ) : (
-          <form action={createLeague} className="space-y-4">
+          <form key="create" action={createLeague} className="space-y-4">
             <label className={label}>League name
               <input name="league" required maxLength={24} className={`${inputCls} mt-1`} placeholder="Sunday League Legends" />
             </label>
@@ -66,11 +73,18 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
         <div className="rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm">
           <p className="font-bold text-amber-200">👀 Just looking? Try the demo league</p>
           <p className="mt-1 text-amber-100/80">
-            Invite code <code className="rounded bg-black/30 px-1.5 font-mono font-bold text-white">MATES26</code>, PIN <code className="rounded bg-black/30 px-1.5 font-mono font-bold text-white">1234</code>. Log in as{" "}
-            <b className="text-white">Conor</b> (admin), Ollie, Dave, Niamh, Barry or Aoife.
+            Invite code <code className="rounded bg-black/30 px-1.5 font-mono font-bold text-white">{DEMO_INVITE}</code>. Log in as{" "}
+            <b className="text-white">Conor</b> (admin), Ollie, Dave, Niamh, Barry or Aoife. Ask whoever&apos;s running the demo for the PIN.
           </p>
         </div>
       )}
+      <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <QrCode url={qrUrl} size={120} />
+        <div className="min-w-0 text-sm">
+          <p className="font-display text-lg font-extrabold uppercase leading-tight text-white">Scan to play on your phone</p>
+          <p className="mt-1 text-slate-400">{qrInvite ? <>Opens this page with invite code <b className="font-mono text-lime-300">{qrInvite}</b> filled in.</> : "Opens this page on your phone."}</p>
+        </div>
+      </div>
     </div>
   );
 }

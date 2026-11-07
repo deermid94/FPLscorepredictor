@@ -6,7 +6,9 @@ import { revalidatePath } from "next/cache";
 import { clearSession, hashPin, requireAdmin, requireUser, setSession, verifyPin } from "@/lib/auth";
 import { batch, ensureDb, get, run } from "@/lib/db";
 import { syncFromFpl } from "@/lib/fpl";
-import { currentGw, fixturesForGw, getFixture, getLeague, isLocked, type League } from "@/lib/game";
+import { currentGw, fixturesForGw, getFixture, getLeague, isFinal, isLocked, type League } from "@/lib/game";
+import { attemptKeys, clearFailures, lockoutMessage, recordFailure } from "@/lib/loginGuard";
+import { DEMO_INVITE, isDemoLeague, seedDemo } from "@/lib/seed";
 import { localToUtc } from "@/lib/format";
 
 const err = (path: string, msg: string): never => redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(msg)}`);
@@ -34,7 +36,14 @@ export async function joinLeague(formData: FormData) {
     [league!.id, name],
   );
   if (existing) {
-    if (!verifyPin(pin!, existing.pin_hash)) err("/join", "Wrong PIN for that name (or pick a different name)");
+    const keys = await attemptKeys(league!.id, name);
+    const locked = await lockoutMessage(keys);
+    if (locked) err("/join", locked);
+    if (!verifyPin(pin!, existing.pin_hash)) {
+      await recordFailure(keys);
+      err("/join", "Wrong PIN for that name (or pick a different name)");
+    }
+    await clearFailures(keys);
     await setSession(existing.id);
   } else {
     const gw = await currentGw(league!);
@@ -219,4 +228,59 @@ export async function promote(formData: FormData) {
   if (target === user.id) err("/admin", "You can't change your own admin status");
   await run("UPDATE users SET is_admin = 1 - is_admin WHERE id = ? AND league_id = ?", [target, league.id]);
   redirect("/admin?ok=Admin+updated#players");
+}
+
+async function demoAdmin() {
+  const ctx = await adminLeague();
+  if (!isDemoLeague(ctx.league)) err("/admin", "Demo tools only work in the demo league");
+  return ctx;
+}
+
+const SIM_SCORES: [number, number][] = [
+  [1, 0], [1, 0], [2, 1], [2, 1], [1, 1], [1, 1], [2, 0], [0, 0], [0, 1], [1, 2], [3, 1], [2, 2], [0, 2], [3, 0], [3, 2], [4, 1],
+];
+
+export async function simulateFullTime() {
+  const { league } = await demoAdmin();
+  const gw = await currentGw(league);
+  const next = (await fixturesForGw(league.id, gw))
+    .filter((f) => !isFinal(f))
+    .sort((a, b) => (a.kickoff ?? "").localeCompare(b.kickoff ?? ""))[0];
+  if (!next) err("/admin", `Every GW${gw} match already has a result`);
+  const [h, a] = SIM_SCORES[crypto.randomInt(SIM_SCORES.length)];
+  await run(
+    `INSERT INTO result_overrides (league_id, fixture_id, home, away, updated_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(league_id, fixture_id) DO UPDATE SET home = excluded.home, away = excluded.away, updated_at = excluded.updated_at`,
+    [league.id, next!.id, h, a, new Date().toISOString()],
+  );
+  revalidatePath("/", "layout");
+  redirect(`/week?gw=${gw}&saved=${encodeURIComponent(`Full time (simulated): ${next!.home_short} ${h}-${a} ${next!.away_short}`)}`);
+}
+
+export async function resetDemo(formData: FormData) {
+  const { league } = await demoAdmin();
+  if (formData.get("confirm") !== "yes") err("/admin", "Tick the box to confirm the reset");
+  const users = "SELECT id FROM users WHERE league_id = ?";
+  const fixtures = "SELECT id FROM fixtures WHERE league_id = ?";
+  const id = league.id;
+  await batch([
+    { sql: `DELETE FROM predictions WHERE user_id IN (${users}) OR fixture_id IN (${fixtures})`, args: [id, id] },
+    { sql: `DELETE FROM predictor_guesses WHERE user_id IN (${users}) OR fixture_id IN (${fixtures})`, args: [id, id] },
+    { sql: `DELETE FROM payments WHERE user_id IN (${users})`, args: [id] },
+    { sql: "DELETE FROM wildcards WHERE league_id = ?", args: [id] },
+    { sql: "DELETE FROM result_overrides WHERE league_id = ?", args: [id] },
+    { sql: "DELETE FROM fixtures WHERE league_id = ?", args: [id] },
+    { sql: "DELETE FROM login_attempts WHERE key LIKE ?", args: [`name:${id}:%`] },
+    { sql: "DELETE FROM users WHERE league_id = ?", args: [id] },
+    { sql: "DELETE FROM leagues WHERE id = ?", args: [id] },
+  ]);
+  try {
+    await seedDemo();
+  } catch (e) {
+    console.error("[resetDemo] reseed failed", e);
+    err("/admin", "Demo wiped but reseeding failed. It will reseed on the next server start");
+  }
+  await clearSession();
+  revalidatePath("/", "layout");
+  redirect(`/join?invite=${DEMO_INVITE}&ok=${encodeURIComponent("Demo league reset. Log back in with the demo PIN.")}`);
 }

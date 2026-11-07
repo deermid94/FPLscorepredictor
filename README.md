@@ -29,11 +29,13 @@ npm test           # scoring / prize-split unit tests
 ```
 On first request the app creates `local.db`, syncs from the FPL API (or falls back to `data/fpl-snapshot.json` if it can't reach it) and seeds a demo league:
 
-- Invite code **`MATES26`**, PIN **`1234`** for every player
+- Invite code **`MATES26`**; every player's PIN is `DEMO_PIN` (put it in `.env.local`, e.g. `DEMO_PIN=4826`). If it's unset, a random 6-digit PIN is generated and printed in the server log.
 - Players: **Conor** (admin), Ollie (optimist), Dave (draw merchant), Niamh (pessimist), Barry (Man Utd fanboy), Aoife (contrarian)
 - 4 completed gameweeks of predictions and payments, plus the current gameweek part-picked
 
-Delete `local.db` to reseed. Set `SEED_DEMO=false` to start empty.
+Delete `local.db` to reseed, or use **Reset demo** in Admin (logged in as Conor). Admin also has **Simulate full time**, which gives the next unfinished match a random score in the demo league only. Both demo tools only appear in the demo league. Set `SEED_DEMO=false` to start empty.
+
+Wrong PINs are rate limited: 5 per player name, or 30 per IP, within 15 minutes lock logins for 15 minutes.
 
 ## Deploy to Vercel (free)
 1. Create a free Turso database: `turso db create spl`, then `turso db show spl --url` and `turso db tokens create spl`. You can also use the Turso integration in the Vercel marketplace.
@@ -42,9 +44,10 @@ Delete `local.db` to reseed. Set `SEED_DEMO=false` to start empty.
    |---|---|
    | `TURSO_DATABASE_URL` | `libsql://...` |
    | `TURSO_AUTH_TOKEN` | token from step 1 |
-   | `SESSION_SECRET` | any long random string (`openssl rand -hex 32`) |
-   | `CRON_SECRET` | optional; Vercel sends it to the cron route automatically |
+   | `SESSION_SECRET` | **required**, 16+ characters (`openssl rand -hex 32`). The server refuses to start in production without it |
+   | `CRON_SECRET` | random string; Vercel sends it to the cron route automatically. If unset, anyone can trigger a sync |
    | `SEED_DEMO` | `false` for a real league (default seeds the demo) |
+   | `DEMO_PIN` | 4-8 digit PIN for the demo players (random if unset). Only used when the demo is seeded. Changing it later needs **Reset demo** |
    | `DISPLAY_TIMEZONE` | optional, default `Europe/London` |
 3. Deploy. Tables are created automatically on first request.
 
