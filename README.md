@@ -31,7 +31,7 @@ On first request the app creates `local.db`, syncs from the FPL API (or falls ba
 
 - Invite code **`MATES26`**; every player's PIN is `DEMO_PIN` (put it in `.env.local`, e.g. `DEMO_PIN=4826`). If it's unset, a random 6-digit PIN is generated and printed in the server log.
 - While `SEED_DEMO` isn't `false`, the join page has one-tap **Conor (admin)** and **Ollie (player)** buttons that log in to the demo without a PIN. Anyone with the URL can use them, but they only reach the demo league.
-- Players: **Conor** (admin), Ollie (optimist), Dave (draw merchant), Niamh (pessimist), Barry (Man Utd fanboy), Aoife (contrarian)
+- Players: **Conor** (admin), Ollie (optimist), Dave (draw merchant), Niamh (pessimist), Barry (Man Utd superfan), Aoife (contrarian)
 - 4 completed gameweeks of predictions and payments, plus the current gameweek part-picked
 
 Delete `local.db` to reseed, or use **Reset demo** in Admin (logged in as Conor). Admin also has **Simulate full time**, which gives the next unfinished match a random score in the demo league only. Both demo tools only appear in the demo league. Set `SEED_DEMO=false` to start empty.

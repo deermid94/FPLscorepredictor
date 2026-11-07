@@ -36,7 +36,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-6">
-      <PageTitle kicker="Gaffer's office" title="Admin" subtitle={<>Invite code <code className="rounded-lg bg-lime-400 px-2 py-0.5 font-mono text-base font-black tracking-widest text-slate-950">{league.invite_code}</code> Share it with the lads.</>} />
+      <PageTitle kicker="Gaffer's office" title="Admin" subtitle={<>Invite code <code className="rounded-lg bg-lime-400 px-2 py-0.5 font-mono text-base font-black tracking-widest text-slate-950">{league.invite_code}</code> Share it with your friends.</>} />
       {sp.ok && <Flash>{sp.ok}</Flash>}
       {sp.error && <Flash tone="error">{sp.error}</Flash>}
       {sp.created && <Flash>League created! Share the invite code above.</Flash>}
