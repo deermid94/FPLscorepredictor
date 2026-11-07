@@ -11,3 +11,11 @@ export function reportFor(data: LeagueData, userId: number) {
   const predictions = data.predictions.filter((p) => p.user_id === userId && lockedIds.has(p.fixture_id));
   return scoutingReport(picks, guesses, predictions);
 }
+
+export function optimismLabel(o: number) {
+  if (o >= 140) return { emoji: "🚀", tone: "text-fuchsia-300" };
+  if (o >= 110) return { emoji: "😁", tone: "text-lime-300" };
+  if (o >= 90) return { emoji: "🙂", tone: "text-sky-300" };
+  if (o >= 60) return { emoji: "😐", tone: "text-amber-300" };
+  return { emoji: "🌧️", tone: "text-slate-300" };
+}
