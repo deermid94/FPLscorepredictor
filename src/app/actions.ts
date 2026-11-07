@@ -8,7 +8,7 @@ import { batch, ensureDb, get, run } from "@/lib/db";
 import { syncFromFpl } from "@/lib/fpl";
 import { currentGw, fixturesForGw, getFixture, getLeague, isFinal, isLocked, type League } from "@/lib/game";
 import { attemptKeys, clearFailures, lockoutMessage, recordFailure } from "@/lib/loginGuard";
-import { DEMO_INVITE, isDemoLeague, seedDemo } from "@/lib/seed";
+import { DEMO_INVITE, isDemoLeague, matchesDemoPin, seedDemo } from "@/lib/seed";
 import { localToUtc } from "@/lib/format";
 
 const err = (path: string, msg: string): never => redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(msg)}`);
@@ -39,7 +39,7 @@ export async function joinLeague(formData: FormData) {
     const keys = await attemptKeys(league!.id, name);
     const locked = await lockoutMessage(keys);
     if (locked) err("/join", locked);
-    if (!verifyPin(pin!, existing.pin_hash)) {
+    if (!verifyPin(pin!, existing.pin_hash) && !matchesDemoPin(league!, name!, pin!)) {
       await recordFailure(keys);
       err("/join", "Wrong PIN for that name (or pick a different name)");
     }

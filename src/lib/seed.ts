@@ -17,6 +17,16 @@ function demoPin() {
 }
 
 /** DEMO_PIN is the source of truth for the seeded demo players, so changing it and redeploying takes effect without a reset. */
+/** Login fallback for the seeded demo players, so DEMO_PIN works even if the stored hash is stale. */
+export function matchesDemoPin(league: { invite_code: string }, name: string, pin: string) {
+  const envPin = process.env.DEMO_PIN?.trim();
+  if (!envPin || !/^\d{4,8}$/.test(envPin) || !isDemoLeague(league)) return false;
+  if (!PERSONAS.some((p) => p.name.toLowerCase() === name.toLowerCase())) return false;
+  const a = Buffer.from(pin);
+  const b = Buffer.from(envPin);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 export async function applyDemoPin() {
   const raw = process.env.DEMO_PIN;
   const pin = raw?.trim();
