@@ -78,9 +78,9 @@ export async function demoGuest(formData: FormData) {
   const league = await get<League>("SELECT * FROM leagues WHERE invite_code = ?", [DEMO_INVITE]);
   if (!league) err("/join", "Demo league isn't ready yet; reload and try again");
   // A guest's name is their login, so typing it again gets them back in. PIN-protected members are never reachable this way.
-  const existing = await get<{ id: number; is_guest: number }>("SELECT id, is_guest FROM users WHERE league_id = ? AND name = ?", [league!.id, name]);
+  const existing = await get<{ id: number; is_guest: number; is_admin: number }>("SELECT id, is_guest, is_admin FROM users WHERE league_id = ? AND name = ?", [league!.id, name]);
   if (existing) {
-    if (!existing.is_guest) err("/join", `${name} is already taken in the demo. Pick another name`);
+    if (!existing.is_guest || existing.is_admin) err("/join", `${name} is already taken in the demo. Pick another name`);
     await setSession(existing.id);
     redirect("/week");
   }
