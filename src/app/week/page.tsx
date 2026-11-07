@@ -39,7 +39,7 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
     <div>
       <PageTitle
         title={`Gameweek ${gw}`}
-        subtitle={<>{participants.length} players · {euro(participants.length * league.fee_cents)} in the weekly pot · you&apos;ve got {myPoints} pts so far</>}
+        subtitle={<>{participants.length} players · {euro(participants.length * league.fee_cents)} in the weekly pot · you&apos;ve got {myPoints} pt{myPoints === 1 ? "" : "s"} so far</>}
       >
         <GwPager gw={gw} min={league.start_gw} max={ctx.maxGw} base="/week" />
       </PageTitle>

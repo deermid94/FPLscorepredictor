@@ -44,23 +44,23 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
             <tr>
-              <th className="px-3 py-2">#</th>
-              <th className="px-3 py-2">Player</th>
-              <th className="px-3 py-2 text-right">Pts</th>
-              <th className="px-3 py-2 text-right">Exact</th>
-              <th className="px-3 py-2 text-right">Results</th>
-              <th className="px-3 py-2 text-right">Prize</th>
+              <th className="px-2 py-2 sm:px-3">#</th>
+              <th className="px-2 py-2 sm:px-3">Player</th>
+              <th className="px-2 py-2 sm:px-3 text-right">Pts</th>
+              <th className="px-2 py-2 sm:px-3 text-right">Exact</th>
+              <th className="hidden px-2 py-2 sm:px-3 text-right sm:table-cell">Results</th>
+              <th className="px-2 py-2 sm:px-3 text-right">Prize</th>
             </tr>
           </thead>
           <tbody>
             {t.rows.map((r) => (
               <tr key={r.player.id} className="border-t border-slate-100">
-                <td className="px-3 py-2 font-semibold">{r.rank}</td>
-                <td className="px-3 py-2"><Link className="hover:underline" href={`/scouting/${r.player.id}`}>{r.player.name}</Link></td>
-                <td className="px-3 py-2 text-right text-base font-bold tabular-nums">{r.points}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{r.exacts}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{r.results}</td>
-                <td className={`px-3 py-2 text-right font-semibold tabular-nums ${t.complete ? "text-emerald-700" : "text-slate-400"}`}>{prize(r.prizeCents)}</td>
+                <td className="px-2 py-2 sm:px-3 font-semibold">{r.rank}</td>
+                <td className="px-2 py-2 sm:px-3"><Link className="hover:underline" href={`/scouting/${r.player.id}`}>{r.player.name}</Link></td>
+                <td className="px-2 py-2 sm:px-3 text-right text-base font-bold tabular-nums">{r.points}</td>
+                <td className="px-2 py-2 sm:px-3 text-right tabular-nums">{r.exacts}</td>
+                <td className="hidden px-2 py-2 sm:px-3 text-right tabular-nums sm:table-cell">{r.results}</td>
+                <td className={`px-2 py-2 sm:px-3 text-right font-semibold tabular-nums ${t.complete ? "text-emerald-700" : "text-slate-400"}`}>{prize(r.prizeCents)}</td>
               </tr>
             ))}
           </tbody>

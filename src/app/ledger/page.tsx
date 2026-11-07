@@ -25,14 +25,14 @@ export default async function LedgerPage() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
-              <th className="px-3 py-2 text-left">Player</th>
+              <th className="whitespace-nowrap px-2 py-2 sm:px-3 text-left">Player</th>
               {weeks.map((w) => <th key={w.gw} className="px-2 py-2 text-center">GW{w.gw}</th>)}
             </tr>
           </thead>
           <tbody>
             {l.rows.map((r) => (
               <tr key={r.player.id} className="border-t border-slate-100">
-                <td className="px-3 py-2 font-medium">{r.player.name}</td>
+                <td className="whitespace-nowrap px-2 py-2 sm:px-3 font-medium">{r.player.name}</td>
                 {weeks.map((w) => {
                   const wk = r.weeks.find((x) => x.gw === w.gw);
                   return (
@@ -53,23 +53,23 @@ export default async function LedgerPage() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
-              <th className="px-3 py-2 text-left">Player</th>
-              <th className="px-3 py-2 text-right">Stake</th>
-              <th className="px-3 py-2 text-right">Paid</th>
-              <th className="px-3 py-2 text-right">Owes</th>
-              <th className="px-3 py-2 text-right">Won</th>
-              <th className="px-3 py-2 text-right">Net</th>
+              <th className="whitespace-nowrap px-2 py-2 sm:px-3 text-left">Player</th>
+              <th className="whitespace-nowrap px-2 py-2 sm:px-3 text-right">Stake</th>
+              <th className="whitespace-nowrap px-2 py-2 sm:px-3 text-right">Paid</th>
+              <th className="whitespace-nowrap px-2 py-2 sm:px-3 text-right">Owes</th>
+              <th className="whitespace-nowrap px-2 py-2 sm:px-3 text-right">Won</th>
+              <th className="whitespace-nowrap px-2 py-2 sm:px-3 text-right">Net</th>
             </tr>
           </thead>
           <tbody>
             {l.rows.map((r) => (
               <tr key={r.player.id} className="border-t border-slate-100 tabular-nums">
-                <td className="px-3 py-2 font-medium">{r.player.name}</td>
-                <td className="px-3 py-2 text-right">{euro(r.owedCents)}</td>
-                <td className="px-3 py-2 text-right">{euro(r.paidCents)}</td>
-                <td className={`px-3 py-2 text-right ${r.outstandingCents ? "font-semibold text-rose-700" : "text-slate-400"}`}>{euro(r.outstandingCents)}</td>
-                <td className="px-3 py-2 text-right text-emerald-700">{euro(r.wonCents)}</td>
-                <td className={`px-3 py-2 text-right font-bold ${r.netCents >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{r.netCents >= 0 ? "+" : "-"}{euro(Math.abs(r.netCents))}</td>
+                <td className="whitespace-nowrap px-2 py-2 sm:px-3 font-medium">{r.player.name}</td>
+                <td className="whitespace-nowrap px-2 py-2 sm:px-3 text-right">{euro(r.owedCents)}</td>
+                <td className="whitespace-nowrap px-2 py-2 sm:px-3 text-right">{euro(r.paidCents)}</td>
+                <td className={`whitespace-nowrap px-2 py-2 sm:px-3 text-right ${r.outstandingCents ? "font-semibold text-rose-700" : "text-slate-400"}`}>{euro(r.outstandingCents)}</td>
+                <td className="whitespace-nowrap px-2 py-2 sm:px-3 text-right text-emerald-700">{euro(r.wonCents)}</td>
+                <td className={`whitespace-nowrap px-2 py-2 sm:px-3 text-right font-bold ${r.netCents >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{r.netCents >= 0 ? "+" : "-"}{euro(Math.abs(r.netCents))}</td>
               </tr>
             ))}
           </tbody>

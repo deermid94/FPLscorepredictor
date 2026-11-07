@@ -30,7 +30,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <div className="flex items-center justify-between gap-2 pb-2">
               <Link href="/" className="font-bold tracking-tight">
                 Score Predictor League
-                {league && <span className="ml-2 text-sm font-normal text-emerald-200">{league.name}</span>}
+                {league && <span className="ml-2 hidden text-sm font-normal text-emerald-200 sm:inline">{league.name}</span>}
               </Link>
               {user && (
                 <form action={logout} className="flex items-center gap-2 text-sm">

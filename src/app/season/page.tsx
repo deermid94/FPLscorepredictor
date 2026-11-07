@@ -36,26 +36,26 @@ export default async function SeasonPage() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
             <tr>
-              <th className="px-3 py-2">#</th>
-              <th className="px-3 py-2">Player</th>
-              <th className="px-3 py-2 text-right">Pts</th>
+              <th className="px-2 py-2 sm:px-3">#</th>
+              <th className="px-2 py-2 sm:px-3">Player</th>
+              <th className="px-2 py-2 sm:px-3 text-right">Pts</th>
               {gws.map((g) => <th key={g} className="hidden px-2 py-2 text-right sm:table-cell">GW{g}</th>)}
-              <th className="px-3 py-2 text-right">Wins</th>
-              <th className="px-3 py-2 text-right">Won</th>
+              <th className="px-2 py-2 sm:px-3 text-right">Wins</th>
+              <th className="px-2 py-2 sm:px-3 text-right">Won</th>
             </tr>
           </thead>
           <tbody>
             {s.rows.map((r) => (
               <tr key={r.player.id} className="border-t border-slate-100">
-                <td className="px-3 py-2 font-semibold">{r.rank}</td>
-                <td className="px-3 py-2">
+                <td className="px-2 py-2 sm:px-3 font-semibold">{r.rank}</td>
+                <td className="px-2 py-2 sm:px-3">
                   <Link className="hover:underline" href={`/scouting/${r.player.id}`}>{r.player.name}</Link>
                   {r.potCents > 0 && <span className="ml-1"><Badge tone="amber">Pot winner</Badge></span>}
                 </td>
-                <td className="px-3 py-2 text-right text-base font-bold tabular-nums">{r.points}</td>
+                <td className="px-2 py-2 sm:px-3 text-right text-base font-bold tabular-nums">{r.points}</td>
                 {gws.map((g) => <td key={g} className="hidden px-2 py-2 text-right tabular-nums text-slate-500 sm:table-cell">{r.byWeek[g] ?? "-"}</td>)}
-                <td className="px-3 py-2 text-right tabular-nums">{r.weeklyWins}</td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums text-emerald-700">{euro(r.winningsCents + r.potCents)}</td>
+                <td className="px-2 py-2 sm:px-3 text-right tabular-nums">{r.weeklyWins}</td>
+                <td className="px-2 py-2 sm:px-3 text-right font-semibold tabular-nums text-emerald-700">{euro(r.winningsCents + r.potCents)}</td>
               </tr>
             ))}
           </tbody>

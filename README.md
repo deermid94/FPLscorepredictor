@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Score Predictor League
 
-## Getting Started
+Exact-score Premier League predictions for a group of mates. Fixtures and results come from the undocumented **Fantasy Premier League API**, which we reverse-engineered: see [API_NOTES.md](./API_NOTES.md).
 
-First, run the development server:
+Next.js 15 (App Router, server actions) · Tailwind · SQLite via libSQL (a local file in dev, free [Turso](https://turso.tech) DB in production) · deploys to Vercel's free tier.
 
+## Rules
+- **Points:** correct result (W/D/L) = 1, exact score = 3 (instead of 1). One random **wildcard** match each gameweek scores double.
+- **Locking:** each pick locks at that match's kick-off, and the server enforces it.
+- **Money (tracking only):** €5 per player per gameweek. 1st place gets 40%, 2nd gets 20%, and 40% rolls into the season pot. Tied players pool the prize places they occupy and split them equally (two tied for 1st get 30% each). The season pot goes to the top overall scorer (split on a tie) on the end date the admin sets.
+- **Results** sync from FPL automatically once a match reaches full time (`finished_provisional`). Admins can enter or override results and add fixtures by hand.
+
+## Screens
+| Route | What |
+|---|---|
+| `/join` | Join with an invite code + name + PIN, or start a new league |
+| `/week` | This gameweek: fixtures, wildcard badge, score inputs, lock status, everyone's picks after lock, the app's guess of your pick |
+| `/leaderboard` | Weekly table with prize amounts + Hall of Shame (worst prediction of the week) |
+| `/season` | Season table and pot |
+| `/ledger` | Who has paid each week, winnings, balances, pot |
+| `/scouting`, `/scouting/[id]` | Scouting reports: favourite scoreline, home/away bias, goals predicted vs actual, over-backed team, optimism score, cheeky profile, Predict-the-Predictor hit rate |
+| `/admin` | Season end date, mark payments, manual fixtures/results, re-draw wildcard, force FPL sync, admin roles |
+
+## Run locally
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm test           # scoring / prize-split unit tests
 ```
+On first request the app creates `local.db`, syncs from the FPL API (or falls back to `data/fpl-snapshot.json` if it can't reach it) and seeds a demo league:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Invite code **`MATES26`**, PIN **`1234`** for every player
+- Players: **Conor** (admin), Ollie (optimist), Dave (draw merchant), Niamh (pessimist), Barry (Man Utd fanboy), Aoife (contrarian)
+- 4 completed gameweeks of predictions and payments, plus the current gameweek part-picked
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Delete `local.db` to reseed. Set `SEED_DEMO=false` to start empty.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy to Vercel (free)
+1. Create a free Turso database: `turso db create spl`, then `turso db show spl --url` and `turso db tokens create spl`. You can also use the Turso integration in the Vercel marketplace.
+2. Import this repo in Vercel and set these environment variables:
+   | Var | Value |
+   |---|---|
+   | `TURSO_DATABASE_URL` | `libsql://...` |
+   | `TURSO_AUTH_TOKEN` | token from step 1 |
+   | `SESSION_SECRET` | any long random string (`openssl rand -hex 32`) |
+   | `CRON_SECRET` | optional; Vercel sends it to the cron route automatically |
+   | `SEED_DEMO` | `false` for a real league (default seeds the demo) |
+   | `DISPLAY_TIMEZONE` | optional, default `Europe/London` |
+3. Deploy. Tables are created automatically on first request.
 
-## Learn More
+Without `TURSO_DATABASE_URL` the app still runs on Vercel, but with a throwaway DB in `/tmp` that resets on every cold start. That's fine for a demo and useless for a real league.
 
-To learn more about Next.js, take a look at the following resources:
+`vercel.json` sets up a daily cron (`/api/cron/sync`) as a backstop. Normal syncing happens lazily on page loads: every 2 minutes while matches are live, otherwise every 15 minutes.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Code map
+- `src/lib/fpl.ts`: server-side FPL client, DB-backed response cache, sync into our tables
+- `src/lib/db.ts`: libSQL client + schema
+- `src/lib/scoring.ts`: points, prize splitting, Hall of Shame "wrongness" (pure functions, unit tested)
+- `src/lib/game.ts`: fixtures, wildcard draw, weekly/season tables, ledger
+- `src/lib/scouting.ts`: scouting report stats, profile lines, Predict-the-Predictor model
+- `src/lib/seed.ts`: demo league with persona-driven predictions
+- `src/app/actions.ts`: server actions (auth, picks, admin)

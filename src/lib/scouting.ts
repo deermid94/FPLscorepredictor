@@ -152,11 +152,11 @@ function profileLine(s: Stats): string {
   if (s.optimism >= 120) traits.push({ weight: s.optimism - 100, line: `Chronic optimist. Expects ${s.avgPred.toFixed(1)} goals a game; reality serves ${s.avgActual.toFixed(1)}.` });
   if (s.optimism <= 80) traits.push({ weight: 100 - s.optimism, line: "Pessimist. Treats every fixture like a wet Tuesday in Stoke." });
   if (s.drawBias >= 0.15) traits.push({ weight: s.drawBias * 100, line: `Fence-sitter. Calls ${pct(s.drawRate)} of games a draw.` });
-  if (s.overBacked && s.overBacked.bias >= 0.3)
-    traits.push({ weight: s.overBacked.bias * 100, line: `Wears ${s.overBacked.name}-tinted glasses. Backed them to win ${s.overBacked.predictedWins} of ${s.overBacked.matches}; they won ${s.overBacked.actualWins}.` });
+  if (s.overBacked && s.overBacked.bias >= 0.6 && s.overBacked.predictedWins - s.overBacked.actualWins >= 3)
+    traits.push({ weight: s.overBacked.bias * 60, line: `Wears ${s.overBacked.name}-tinted glasses. Backed them to win ${s.overBacked.predictedWins} of ${s.overBacked.matches}; they won ${s.overBacked.actualWins}.` });
   if (s.homeBias >= 0.2) traits.push({ weight: s.homeBias * 100, line: "Home banker. Thinks away teams should stay on the bus." });
   if (s.awayBias >= 0.15) traits.push({ weight: s.awayBias * 100, line: "Contrarian. Lives for an away-day smash and grab." });
-  if (s.finished >= 8 && s.exactCount / s.finished >= 0.15) traits.push({ weight: 30, line: "Spooky. Nails exact scores like they've seen the tape." });
+  if (s.finished >= 8 && s.exactCount / s.finished >= 0.15) traits.push({ weight: (s.exactCount / s.finished - 0.1) * 100, line: "Spooky. Nails exact scores like they've seen the tape." });
   if (s.finished >= 8 && s.resultRate < 0.4) traits.push({ weight: (0.5 - s.resultRate) * 100, line: `A coin would do better. Gets the result right ${pct(s.resultRate)} of the time.` });
   if (s.predictor.judged >= 8 && s.predictor.result / s.predictor.judged >= 0.7) traits.push({ weight: 20, line: `Painfully predictable. The app calls their result ${pct(s.predictor.result / s.predictor.judged)} of the time.` });
   traits.sort((a, b) => b.weight - a.weight);
