@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { all, batch, get } from "./db";
+import { all, batch, get, run } from "./db";
 import { hashPin } from "./auth";
 import { isLocked, type Fixture } from "./game";
 import { guessPick, homeEdge, type Pick } from "./scouting";
@@ -14,6 +14,16 @@ function demoPin() {
   const pin = process.env.DEMO_PIN?.trim();
   if (pin && /^\d{4,8}$/.test(pin)) return { pin, fromEnv: true };
   return { pin: String(crypto.randomInt(100000, 1000000)), fromEnv: false };
+}
+
+/** DEMO_PIN is the source of truth for the seeded demo players, so changing it and redeploying takes effect without a reset. */
+export async function applyDemoPin() {
+  const pin = process.env.DEMO_PIN?.trim();
+  if (!pin || !/^\d{4,8}$/.test(pin)) return;
+  await run(
+    `UPDATE users SET pin_hash = ? WHERE league_id = (SELECT id FROM leagues WHERE invite_code = ?) AND name IN (${PERSONAS.map(() => "?").join(", ")})`,
+    [hashPin(pin), DEMO_INVITE, ...PERSONAS.map((p) => p.name)],
+  );
 }
 
 function rng(seed: number) {

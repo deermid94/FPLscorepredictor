@@ -47,7 +47,7 @@ Wrong PINs are rate limited: 5 per player name, or 30 per IP, within 15 minutes 
    | `SESSION_SECRET` | **required**, 16+ characters (`openssl rand -hex 32`). The server refuses to start in production without it |
    | `CRON_SECRET` | random string; Vercel sends it to the cron route automatically. If unset, anyone can trigger a sync |
    | `SEED_DEMO` | `false` for a real league (default seeds the demo) |
-   | `DEMO_PIN` | 4-8 digit PIN for the demo players (random if unset). Only used when the demo is seeded. Changing it later needs **Reset demo** |
+   | `DEMO_PIN` | 4-8 digit PIN for the demo players (random if unset). Applied to the six demo players on every server start, so change it and redeploy to reset their PIN |
    | `DISPLAY_TIMEZONE` | optional, default `Europe/London` |
 3. Deploy. Tables are created automatically on first request.
 

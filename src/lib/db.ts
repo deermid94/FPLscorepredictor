@@ -163,8 +163,9 @@ export function ensureDb(): Promise<void> {
       const { syncFromFpl } = await import("./fpl");
       await syncFromFpl();
       if (process.env.SEED_DEMO !== "false") {
-        const { DEMO_INVITE, seedDemo } = await import("./seed");
+        const { DEMO_INVITE, applyDemoPin, seedDemo } = await import("./seed");
         if (!(await get("SELECT id FROM leagues WHERE invite_code = ?", [DEMO_INVITE]))) await seedDemo();
+        else await applyDemoPin();
       }
     })().catch((e) => {
       ready = null;
