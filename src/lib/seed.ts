@@ -22,11 +22,13 @@ function demoPin() {
 export function matchesDemoPin(league: { invite_code: string }, name: string, pin: string) {
   const envPin = process.env.DEMO_PIN?.trim();
   if (!envPin || !/^\d{4,8}$/.test(envPin) || !isDemoLeague(league)) return false;
-  if (!PERSONAS.some((p) => p.name.toLowerCase() === name.toLowerCase())) return false;
+  if (!isDemoPersona(name)) return false;
   const a = Buffer.from(pin);
   const b = Buffer.from(envPin);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+export const isDemoPersona = (name: string) => PERSONAS.some((p) => p.name.toLowerCase() === name.toLowerCase());
 
 export async function applyDemoPin() {
   const raw = process.env.DEMO_PIN;
