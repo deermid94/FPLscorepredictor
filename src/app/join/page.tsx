@@ -35,7 +35,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
       {demo && (
         <div className="rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm">
           <p className="font-bold text-amber-200">Just looking? Play the demo</p>
-          <p className="mt-1 text-amber-100/80">Pop in your name and you&apos;re in a league with dummy players and past results. No PIN needed.</p>
+          <p className="mt-1 text-amber-100/80">Pop in your name and you&apos;re in a league with dummy players and past results. No PIN needed; use the same name to get back in.</p>
           <form action={demoGuest} className="mt-3 flex gap-2">
             <input name="name" required maxLength={24} aria-label="Your name for the demo" className={`${inputCls} min-w-0 flex-1`} placeholder="Your name" />
             <Button className="shrink-0 rounded-xl px-4 text-sm">Play demo →</Button>
