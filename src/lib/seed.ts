@@ -17,13 +17,28 @@ function demoPin() {
 }
 
 /** DEMO_PIN is the source of truth for the seeded demo players, so changing it and redeploying takes effect without a reset. */
+/** Login fallback for the seeded demo players, so DEMO_PIN works even if the stored hash is stale. */
+export function matchesDemoPin(league: { invite_code: string }, name: string, pin: string) {
+  const envPin = process.env.DEMO_PIN?.trim();
+  if (!envPin || !/^\d{4,8}$/.test(envPin) || !isDemoLeague(league)) return false;
+  if (!PERSONAS.some((p) => p.name.toLowerCase() === name.toLowerCase())) return false;
+  const a = Buffer.from(pin);
+  const b = Buffer.from(envPin);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 export async function applyDemoPin() {
-  const pin = process.env.DEMO_PIN?.trim();
-  if (!pin || !/^\d{4,8}$/.test(pin)) return;
-  await run(
+  const raw = process.env.DEMO_PIN;
+  const pin = raw?.trim();
+  if (!pin || !/^\d{4,8}$/.test(pin)) {
+    console.warn(`[demo] DEMO_PIN ${raw === undefined ? "is not set" : `is not 4-8 digits (${raw.length} chars)`}; demo PINs unchanged`);
+    return;
+  }
+  const res = await run(
     `UPDATE users SET pin_hash = ? WHERE league_id = (SELECT id FROM leagues WHERE invite_code = ?) AND name IN (${PERSONAS.map(() => "?").join(", ")})`,
     [hashPin(pin), DEMO_INVITE, ...PERSONAS.map((p) => p.name)],
   );
+  console.log(`[demo] DEMO_PIN applied to ${res.rowsAffected} demo players`);
 }
 
 function rng(seed: number) {

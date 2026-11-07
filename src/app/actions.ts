@@ -8,7 +8,7 @@ import { batch, ensureDb, get, run } from "@/lib/db";
 import { syncFromFpl } from "@/lib/fpl";
 import { currentGw, fixturesForGw, getFixture, getLeague, isFinal, isLocked, type League } from "@/lib/game";
 import { attemptKeys, clearFailures, lockoutMessage, recordFailure } from "@/lib/loginGuard";
-import { DEMO_INVITE, isDemoLeague, seedDemo } from "@/lib/seed";
+import { DEMO_INVITE, isDemoLeague, matchesDemoPin, seedDemo } from "@/lib/seed";
 import { localToUtc } from "@/lib/format";
 
 const err = (path: string, msg: string): never => redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(msg)}`);
@@ -39,7 +39,7 @@ export async function joinLeague(formData: FormData) {
     const keys = await attemptKeys(league!.id, name);
     const locked = await lockoutMessage(keys);
     if (locked) err("/join", locked);
-    if (!verifyPin(pin!, existing.pin_hash)) {
+    if (!verifyPin(pin!, existing.pin_hash) && !matchesDemoPin(league!, name!, pin!)) {
       await recordFailure(keys);
       err("/join", "Wrong PIN for that name (or pick a different name)");
     }
@@ -52,6 +52,21 @@ export async function joinLeague(formData: FormData) {
     ]);
     await setSession(Number(res.lastInsertRowid));
   }
+  redirect("/week");
+}
+
+const DEMO_LOGINS = ["Conor", "Ollie"];
+
+export async function demoLogin(formData: FormData) {
+  await ensureDb();
+  const name = String(formData.get("name") ?? "");
+  if (process.env.SEED_DEMO === "false" || !DEMO_LOGINS.includes(name)) err("/join", "Demo login isn't available");
+  const user = await get<{ id: number }>(
+    "SELECT u.id FROM users u JOIN leagues l ON l.id = u.league_id WHERE l.invite_code = ? AND u.name = ?",
+    [DEMO_INVITE, name],
+  );
+  if (!user) err("/join", "Demo league isn't ready yet; reload and try again");
+  await setSession(user!.id);
   redirect("/week");
 }
 

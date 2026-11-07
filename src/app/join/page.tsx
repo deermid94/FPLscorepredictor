@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { Button, Card, Flash, inputCls } from "@/components/ui";
-import { createLeague, joinLeague } from "../actions";
+import { createLeague, demoLogin, joinLeague } from "../actions";
 import { Goal } from "lucide-react";
 import { QrCode } from "@/components/QrCode";
 import { joinUrl, siteOrigin } from "@/lib/origin";
@@ -71,11 +71,18 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
       </Card>
       {demo && (
         <div className="rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm">
-          <p className="font-bold text-amber-200">👀 Just looking? Try the demo league</p>
-          <p className="mt-1 text-amber-100/80">
-            Invite code <code className="rounded bg-black/30 px-1.5 font-mono font-bold text-white">{DEMO_INVITE}</code>. Log in as{" "}
-            <b className="text-white">Conor</b> (admin), Ollie, Dave, Niamh, Barry or Aoife. Ask whoever&apos;s running the demo for the PIN.
-          </p>
+          <p className="font-bold text-amber-200">Just looking? Try the demo league</p>
+          <p className="mt-1 text-amber-100/80">One tap, no PIN. Dummy data, so go wild.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <form action={demoLogin}>
+              <input type="hidden" name="name" value="Conor" />
+              <Button className="w-full rounded-xl py-2.5 text-sm">Conor (admin)</Button>
+            </form>
+            <form action={demoLogin}>
+              <input type="hidden" name="name" value="Ollie" />
+              <Button variant="ghost" className="w-full rounded-xl py-2.5 text-sm">Ollie (player)</Button>
+            </form>
+          </div>
         </div>
       )}
       <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4">
