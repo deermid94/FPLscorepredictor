@@ -274,7 +274,12 @@ export async function resetDemo(formData: FormData) {
     { sql: "DELETE FROM users WHERE league_id = ?", args: [id] },
     { sql: "DELETE FROM leagues WHERE id = ?", args: [id] },
   ]);
-  await seedDemo();
+  try {
+    await seedDemo();
+  } catch (e) {
+    console.error("[resetDemo] reseed failed", e);
+    err("/admin", "Demo wiped but reseeding failed. It will reseed on the next server start");
+  }
   await clearSession();
   revalidatePath("/", "layout");
   redirect(`/join?invite=${DEMO_INVITE}&ok=${encodeURIComponent("Demo league reset. Log back in with the demo PIN.")}`);
