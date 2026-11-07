@@ -57,12 +57,12 @@ export function Avatar({ id, name, size = "md" }: { id: number; name: string; si
   );
 }
 
-export function GwPager({ gw, min, max, base }: { gw: number; min: number; max: number; base: string }) {
+export function GwPager({ gw, min, max, base, compact = false }: { gw: number; min: number; max: number; base: string; compact?: boolean }) {
   const btn = "grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-white/5 text-lg font-bold text-white transition hover:bg-lime-400 hover:text-slate-950";
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex shrink-0 items-center gap-2">
       {gw > min ? <Link aria-label={`GW${gw - 1}`} className={btn} href={`${base}?gw=${gw - 1}`}>&lsaquo;</Link> : <span className={`${btn} opacity-30`}>&lsaquo;</span>}
-      <span className="rounded-full bg-lime-400 px-3 py-1.5 font-display text-sm font-extrabold text-slate-950">GW{gw}</span>
+      {!compact && <span className="rounded-full bg-lime-400 px-3 py-1.5 font-display text-sm font-extrabold text-slate-950">GW{gw}</span>}
       {gw < max ? <Link aria-label={`GW${gw + 1}`} className={btn} href={`${base}?gw=${gw + 1}`}>&rsaquo;</Link> : <span className={`${btn} opacity-30`}>&rsaquo;</span>}
     </div>
   );

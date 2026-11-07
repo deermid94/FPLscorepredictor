@@ -54,11 +54,11 @@ export default async function WeekPage({ searchParams }: { searchParams: Promise
       <div className="relative mb-4 overflow-hidden rounded-3xl border border-lime-400/20 bg-gradient-to-br from-emerald-900/80 via-emerald-950 to-slate-950 p-5 shadow-2xl shadow-black/40">
         <div className="pointer-events-none absolute -right-6 -top-10 select-none font-display text-[9rem] font-extrabold leading-none text-white/[0.04]">{gw}</div>
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-lime-400">Matchday</p>
             <h1 className="font-display text-3xl font-extrabold uppercase leading-none text-white sm:text-4xl">Gameweek {gw}</h1>
           </div>
-          <GwPager gw={gw} min={league.start_gw} max={ctx.maxGw} base="/week" />
+          <GwPager gw={gw} min={league.start_gw} max={ctx.maxGw} base="/week" compact />
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-2xl bg-black/25 p-2">
