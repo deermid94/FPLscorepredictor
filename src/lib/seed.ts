@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { all, batch, get, run } from "./db";
 import { hashPin } from "./auth";
 import { isLocked, type Fixture } from "./game";
@@ -5,7 +6,15 @@ import { guessPick, homeEdge, type Pick } from "./scouting";
 import { outcome, type Outcome } from "./scoring";
 
 export const DEMO_INVITE = "MATES26";
-export const DEMO_PIN = "1234";
+
+/** True when demo seeding is on and this is the seeded demo league (real invite codes are 6 chars, so they can't collide). */
+export const isDemoLeague = (league: { invite_code: string }) => process.env.SEED_DEMO !== "false" && league.invite_code === DEMO_INVITE;
+
+function demoPin() {
+  const pin = process.env.DEMO_PIN?.trim();
+  if (pin && /^\d{4,8}$/.test(pin)) return { pin, fromEnv: true };
+  return { pin: String(crypto.randomInt(100000, 1000000)), fromEnv: false };
+}
 
 function rng(seed: number) {
   return () => {
@@ -71,7 +80,8 @@ export async function seedDemo() {
     "2027-05-23",
   ]);
   const league = (await get<{ id: number }>("SELECT id FROM leagues WHERE invite_code = ?", [DEMO_INVITE]))!;
-  const pinHash = hashPin(DEMO_PIN);
+  const { pin, fromEnv } = demoPin();
+  const pinHash = hashPin(pin);
   for (const p of PERSONAS) {
     await run("INSERT INTO users (league_id, name, pin_hash, is_admin, joined_gw) VALUES (?, ?, ?, ?, ?)", [
       league.id, p.name, pinHash, p.name === "Conor" ? 1 : 0, startGw,
@@ -119,5 +129,5 @@ export async function seedDemo() {
     for (const [name, pick] of newPicks) history.set(name, [...(history.get(name) ?? []), pick]);
   }
   await batch(stmts);
-  console.log(`[seed] Demo league "${DEMO_INVITE}" created: GW${startGw}-${currentGw}, ${PERSONAS.length} players, PIN ${DEMO_PIN}`);
+  console.log(`[seed] Demo league "${DEMO_INVITE}" created: GW${startGw}-${currentGw}, ${PERSONAS.length} players, PIN ${fromEnv ? "from DEMO_PIN" : `${pin} (random; set DEMO_PIN to choose one)`}`);
 }

@@ -5,12 +5,19 @@ import { ensureDb, get } from "./db";
 import { syncFromFpl } from "./fpl";
 
 const COOKIE = "spl_session";
-const SECRET = process.env.SESSION_SECRET || "dev-only-secret-set-SESSION_SECRET-in-production";
+const DEV_SECRET = "dev-only-secret-set-SESSION_SECRET-in-production";
+
+function secret() {
+  const s = process.env.SESSION_SECRET;
+  if (s && s.length >= 16) return s;
+  if (process.env.NODE_ENV === "production") throw new Error("SESSION_SECRET must be set (16+ characters) in production");
+  return DEV_SECRET;
+}
 
 export type User = { id: number; league_id: number; name: string; is_admin: number; joined_gw: number };
 
 function sign(value: string) {
-  return crypto.createHmac("sha256", SECRET).update(value).digest("base64url");
+  return crypto.createHmac("sha256", secret()).update(value).digest("base64url");
 }
 
 export function hashPin(pin: string) {
@@ -45,7 +52,10 @@ export async function currentUser(): Promise<User | null> {
   const raw = (await cookies()).get(COOKIE)?.value;
   if (!raw) return null;
   const [value, mac] = raw.split(".");
-  if (!mac || sign(value) !== mac) return null;
+  if (!mac) return null;
+  const expected = Buffer.from(sign(value));
+  const given = Buffer.from(mac);
+  if (expected.length !== given.length || !crypto.timingSafeEqual(expected, given)) return null;
   return (await get<User>("SELECT id, league_id, name, is_admin, joined_gw FROM users WHERE id = ?", [Number(value)])) ?? null;
 }
 

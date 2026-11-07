@@ -5,7 +5,10 @@ import { currentGw, fixturesForGw, getLeague, getPlayers, getTeams, getWildcard,
 import { parseGw } from "@/lib/context";
 import { dateLabel, kickoffLabel, utcToLocalInput } from "@/lib/format";
 import { Avatar, Badge, Button, Card, Flash, PageTitle, inputCls } from "@/components/ui";
-import { addFixture, clearManualResult, deleteFixture, forceSync, promote, rerollWildcard, setResult, setSeasonEnd, togglePayment } from "../actions";
+import { addFixture, clearManualResult, deleteFixture, forceSync, promote, rerollWildcard, resetDemo, setResult, setSeasonEnd, simulateFullTime, togglePayment } from "../actions";
+import { QrCode } from "@/components/QrCode";
+import { joinUrl, siteOrigin } from "@/lib/origin";
+import { isDemoLeague } from "@/lib/seed";
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
@@ -27,6 +30,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const paid = new Set(payments.filter((p) => p.paid).map((p) => p.user_id));
   const wildcard = (await fixturesForGw(league.id, cur)).find((f) => f.id === wildcardId);
   const back = `/admin?rgw=${rgw}`;
+  const inviteUrl = joinUrl(await siteOrigin(), league.invite_code);
+  const demo = isDemoLeague(league);
   const gwOptions = Array.from({ length: max - league.start_gw + 1 }, (_, i) => league.start_gw + i);
 
   return (
@@ -35,6 +40,34 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       {sp.ok && <Flash>{sp.ok}</Flash>}
       {sp.error && <Flash tone="error">{sp.error}</Flash>}
       {sp.created && <Flash>League created! Share the invite code above.</Flash>}
+
+      <Card className="flex items-center gap-4">
+        <QrCode url={inviteUrl} size={112} />
+        <div className="min-w-0 text-sm">
+          <p className="font-display text-lg font-extrabold uppercase leading-tight text-white">Invite by QR</p>
+          <p className="mt-1 text-slate-400">Mates scan this to open the join page with <b className="font-mono text-lime-300">{league.invite_code}</b> filled in.</p>
+          <p className="mt-1 truncate font-mono text-xs text-slate-500">{inviteUrl}</p>
+        </div>
+      </Card>
+
+      {demo && (
+        <section id="demo">
+          <h2 className="mb-2 font-display text-xl font-extrabold uppercase text-white">🎬 Demo tools</h2>
+          <Card className="space-y-4 border-fuchsia-400/30">
+            <form action={simulateFullTime} className="space-y-2">
+              <p className="text-sm text-slate-300">Blow the final whistle on the next GW{cur} match without a result. It gets a random realistic score (this league only) and points update at once. Undo it with &ldquo;Hand back to API&rdquo; under Fixtures &amp; results.</p>
+              <Button className="w-full">⏱️ Simulate full time</Button>
+            </form>
+            <form action={resetDemo} className="space-y-2 border-t border-white/10 pt-4">
+              <p className="text-sm text-slate-300">Wipe this league&apos;s picks, payments, results and players, and reseed the demo from scratch. Everyone gets logged out.</p>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-200">
+                <input type="checkbox" name="confirm" value="yes" required className="h-4 w-4 accent-rose-500" /> Yes, reset the demo league
+              </label>
+              <Button variant="danger" className="w-full">♻️ Reset demo</Button>
+            </form>
+          </Card>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-2 font-display text-xl font-extrabold uppercase text-white">📅 Season end date</h2>
