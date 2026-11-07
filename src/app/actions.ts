@@ -70,6 +70,23 @@ export async function demoLogin(formData: FormData) {
   redirect("/week");
 }
 
+export async function demoGuest(formData: FormData) {
+  await ensureDb();
+  const name = cleanName(formData.get("name"));
+  if (process.env.SEED_DEMO === "false") err("/join", "Demo isn't available");
+  if (!name) err("/join", "Pop your name in to play the demo");
+  const league = await get<League>("SELECT * FROM leagues WHERE invite_code = ?", [DEMO_INVITE]);
+  if (!league) err("/join", "Demo league isn't ready yet; reload and try again");
+  if (await get("SELECT id FROM users WHERE league_id = ? AND name = ?", [league!.id, name])) {
+    err("/join", `Someone's already playing the demo as ${name}. Try another name`);
+  }
+  const res = await run("INSERT INTO users (league_id, name, pin_hash, is_admin, joined_gw) VALUES (?, ?, ?, 0, ?)", [
+    league!.id, name, hashPin(crypto.randomBytes(16).toString("hex")), await currentGw(league!),
+  ]);
+  await setSession(Number(res.lastInsertRowid));
+  redirect("/week");
+}
+
 export async function createLeague(formData: FormData) {
   await ensureDb();
   const leagueName = cleanName(formData.get("league")) || "Score Predictor League";
