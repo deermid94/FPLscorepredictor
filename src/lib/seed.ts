@@ -73,12 +73,12 @@ export async function seedDemo() {
   const currentGw = Math.max(5, cur?.gw ?? 5);
   const startGw = currentGw - 4;
 
-  await run("INSERT INTO leagues (name, invite_code, start_gw, season_end_date, fee_cents) VALUES (?, ?, ?, ?, 500)", [
-    "The Lads' League",
-    DEMO_INVITE,
-    startGw,
-    "2027-05-23",
-  ]);
+  // Several serverless instances can cold-start at once; only the one that creates the league seeds it.
+  const created = await run(
+    "INSERT INTO leagues (name, invite_code, start_gw, season_end_date, fee_cents) VALUES (?, ?, ?, ?, 500) ON CONFLICT(invite_code) DO NOTHING",
+    ["The Lads' League", DEMO_INVITE, startGw, "2027-05-23"],
+  );
+  if (created.rowsAffected === 0) return;
   const league = (await get<{ id: number }>("SELECT id FROM leagues WHERE invite_code = ?", [DEMO_INVITE]))!;
   const { pin, fromEnv } = demoPin();
   const pinHash = hashPin(pin);
