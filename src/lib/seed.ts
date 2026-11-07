@@ -16,6 +16,16 @@ function demoPin() {
   return { pin: String(crypto.randomInt(100000, 1000000)), fromEnv: false };
 }
 
+/** DEMO_PIN is the source of truth for the seeded demo players, so changing it and redeploying takes effect without a reset. */
+export async function applyDemoPin() {
+  const pin = process.env.DEMO_PIN?.trim();
+  if (!pin || !/^\d{4,8}$/.test(pin)) return;
+  await run(
+    `UPDATE users SET pin_hash = ? WHERE league_id = (SELECT id FROM leagues WHERE invite_code = ?) AND name IN (${PERSONAS.map(() => "?").join(", ")})`,
+    [hashPin(pin), DEMO_INVITE, ...PERSONAS.map((p) => p.name)],
+  );
+}
+
 function rng(seed: number) {
   return () => {
     seed |= 0;
@@ -73,22 +83,21 @@ export async function seedDemo() {
   const currentGw = Math.max(5, cur?.gw ?? 5);
   const startGw = currentGw - 4;
 
-  await run("INSERT INTO leagues (name, invite_code, start_gw, season_end_date, fee_cents) VALUES (?, ?, ?, ?, 500)", [
-    "The Lads' League",
-    DEMO_INVITE,
-    startGw,
-    "2027-05-23",
-  ]);
-  const league = (await get<{ id: number }>("SELECT id FROM leagues WHERE invite_code = ?", [DEMO_INVITE]))!;
   const { pin, fromEnv } = demoPin();
   const pinHash = hashPin(pin);
-  for (const p of PERSONAS) {
-    await run("INSERT INTO users (league_id, name, pin_hash, is_admin, joined_gw) VALUES (?, ?, ?, ?, ?)", [
-      league.id, p.name, pinHash, p.name === "Conor" ? 1 : 0, startGw,
-    ]);
-  }
-  const users = await all<{ id: number; name: string }>("SELECT id, name FROM users WHERE league_id = ?", [league.id]);
-  const uid = (name: string) => users.find((u) => u.name === name)!.id;
+  // Everything goes in one atomic batch, so concurrent cold starts never see a half-seeded league.
+  const LEAGUE = "(SELECT id FROM leagues WHERE invite_code = ?)";
+  const USER = "(SELECT u.id FROM users u JOIN leagues l ON l.id = u.league_id WHERE l.invite_code = ? AND u.name = ?)";
+  const stmts: { sql: string; args: (number | string)[] }[] = [
+    {
+      sql: "INSERT INTO leagues (name, invite_code, start_gw, season_end_date, fee_cents) VALUES (?, ?, ?, ?, 500)",
+      args: ["The Lads' League", DEMO_INVITE, startGw, "2027-05-23"],
+    },
+    ...PERSONAS.map((p) => ({
+      sql: `INSERT INTO users (league_id, name, pin_hash, is_admin, joined_gw) VALUES (${LEAGUE}, ?, ?, ?, ?)`,
+      args: [DEMO_INVITE, p.name, pinHash, p.name === "Conor" ? 1 : 0, startGw],
+    })),
+  ];
 
   const fixtures = await all<Fixture>(
     `SELECT f.*, h.name AS home_name, h.short_name AS home_short, a.name AS away_name, a.short_name AS away_short
@@ -97,17 +106,16 @@ export async function seedDemo() {
     [startGw, currentGw],
   );
 
-  const stmts: { sql: string; args: (number | string)[] }[] = [];
   const history = new Map<string, Pick[]>();
   for (let gw = startGw; gw <= currentGw; gw++) {
     const gwFixtures = fixtures.filter((f) => f.gameweek === gw);
     if (!gwFixtures.length) continue;
     const wildcard = gwFixtures[Math.floor(r() * gwFixtures.length)];
-    stmts.push({ sql: "INSERT INTO wildcards (league_id, gameweek, fixture_id) VALUES (?, ?, ?)", args: [league.id, gw, wildcard.id] });
+    stmts.push({ sql: `INSERT INTO wildcards (league_id, gameweek, fixture_id) VALUES (${LEAGUE}, ?, ?)`, args: [DEMO_INVITE, gw, wildcard.id] });
 
     const newPicks: [string, Pick][] = [];
     for (const persona of PERSONAS) {
-      const id = uid(persona.name);
+      const user = [DEMO_INVITE, persona.name];
       // Current gameweek: everyone has picked the locked matches; a few have got their open picks in early.
       if (gw === currentGw && persona.name === "Conor") {
         if (!gwFixtures.some((f) => isLocked(f))) continue;
@@ -116,18 +124,24 @@ export async function seedDemo() {
         if (gw === currentGw && !isLocked(f) && (persona.name === "Conor" || persona.name === "Ollie" || r() < 0.4)) continue;
         const pick = pickFor(persona, f, r);
         const guess = guessPick(history.get(persona.name) ?? [], f);
-        stmts.push({ sql: "INSERT INTO predictor_guesses (user_id, fixture_id, home, away) VALUES (?, ?, ?, ?)", args: [id, f.id, guess.home, guess.away] });
-        stmts.push({ sql: "INSERT INTO predictions (user_id, fixture_id, home, away) VALUES (?, ?, ?, ?)", args: [id, f.id, pick.home, pick.away] });
+        stmts.push({ sql: `INSERT INTO predictor_guesses (user_id, fixture_id, home, away) VALUES (${USER}, ?, ?, ?)`, args: [...user, f.id, guess.home, guess.away] });
+        stmts.push({ sql: `INSERT INTO predictions (user_id, fixture_id, home, away) VALUES (${USER}, ?, ?, ?)`, args: [...user, f.id, pick.home, pick.away] });
         newPicks.push([persona.name, { ...pick, fixture: f }]);
       }
       const unpaid =
         (persona.name === "Ollie" && gw >= currentGw - 2) ||
         (persona.name === "Barry" && gw === currentGw - 1) ||
         (gw === currentGw && ["Aoife", "Barry"].includes(persona.name));
-      stmts.push({ sql: "INSERT INTO payments (user_id, gameweek, paid) VALUES (?, ?, ?)", args: [id, gw, unpaid ? 0 : 1] });
+      stmts.push({ sql: `INSERT INTO payments (user_id, gameweek, paid) VALUES (${USER}, ?, ?)`, args: [...user, gw, unpaid ? 0 : 1] });
     }
     for (const [name, pick] of newPicks) history.set(name, [...(history.get(name) ?? []), pick]);
   }
-  await batch(stmts);
+  try {
+    await batch(stmts);
+  } catch (e) {
+    // Another instance seeded it first; its batch won and ours rolled back.
+    if (await get("SELECT id FROM leagues WHERE invite_code = ?", [DEMO_INVITE])) return;
+    throw e;
+  }
   console.log(`[seed] Demo league "${DEMO_INVITE}" created: GW${startGw}-${currentGw}, ${PERSONAS.length} players, PIN ${fromEnv ? "from DEMO_PIN" : `${pin} (random; set DEMO_PIN to choose one)`}`);
 }
