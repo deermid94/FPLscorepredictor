@@ -18,12 +18,17 @@ function demoPin() {
 
 /** DEMO_PIN is the source of truth for the seeded demo players, so changing it and redeploying takes effect without a reset. */
 export async function applyDemoPin() {
-  const pin = process.env.DEMO_PIN?.trim();
-  if (!pin || !/^\d{4,8}$/.test(pin)) return;
-  await run(
+  const raw = process.env.DEMO_PIN;
+  const pin = raw?.trim();
+  if (!pin || !/^\d{4,8}$/.test(pin)) {
+    console.warn(`[demo] DEMO_PIN ${raw === undefined ? "is not set" : `is not 4-8 digits (${raw.length} chars)`}; demo PINs unchanged`);
+    return;
+  }
+  const res = await run(
     `UPDATE users SET pin_hash = ? WHERE league_id = (SELECT id FROM leagues WHERE invite_code = ?) AND name IN (${PERSONAS.map(() => "?").join(", ")})`,
     [hashPin(pin), DEMO_INVITE, ...PERSONAS.map((p) => p.name)],
   );
+  console.log(`[demo] DEMO_PIN applied to ${res.rowsAffected} demo players`);
 }
 
 function rng(seed: number) {
